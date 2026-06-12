@@ -112,7 +112,7 @@ export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidad
     if (!user) {
       addToast('Por favor, faça login em sua conta para prosseguir com a finalização de compra.', 'info', 'Autenticação Necessária');
       setIsCartOpen(false);
-      navigate('/login');
+      navigate({ to: '/login' });
       return;
     }
     setActiveCoupon(coupon);
