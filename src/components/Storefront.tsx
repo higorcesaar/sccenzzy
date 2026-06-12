@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
-import Header from './components/Header';
-import ProductCard from './components/ProductCard';
-import CartDrawer from './components/CartDrawer';
-import CheckoutModal from './components/CheckoutModal';
-import CampaignBanner from './components/CampaignBanner';
-import BentoCampanha from './components/BentoCampanha';
-import StoreFinder from './components/StoreFinder';
-import AIHelperModal from './components/AIHelperModal';
-import ProductDetailModal from './components/ProductDetailModal';
+import Header from './Header';
+import ProductCard from './ProductCard';
+import CartDrawer from './CartDrawer';
+import CheckoutModal from './CheckoutModal';
+import CampaignBanner from './CampaignBanner';
+import BentoCampanha from './BentoCampanha';
+import StoreFinder from './StoreFinder';
+import AIHelperModal from './AIHelperModal';
+import ProductDetailModal from './ProductDetailModal';
 import { Product, CartItem } from '../types';
 import { PRODUCTS } from '../data/catalog';
 import { Sparkles, ArrowRight, Instagram, Mail, ShieldCheck, Heart, Star, Award, AwardIcon, Compass, Anchor, Check } from 'lucide-react';
-import { useToast } from './hooks/useToast';
-import { useAuth } from './hooks/useAuth';
+import { useToast } from '../hooks/useToast';
+import { useAuth } from '../hooks/useAuth';
 import { AnimatePresence } from 'motion/react';
 
 export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidades' | 'sapatos' | 'bolsas' | 'cintos' | 'promocao' }) {

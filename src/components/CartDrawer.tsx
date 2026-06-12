@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Trash2, Tag, Gift, ShoppingBag, ArrowRight, ShieldCheck, Ticket } from 'lucide-react';
 import { CartItem } from '../types';
-import { COUPONS } from '../data';
+import { COUPONS } from '../data/catalog';
 import { motion } from 'motion/react';
 
 interface CartDrawerProps {

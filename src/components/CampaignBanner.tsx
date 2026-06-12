@@ -76,7 +76,7 @@ export default function CampaignBanner() {
             muted={isMuted}
             playsInline
             className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
-            referrerPolicy="no-referrer"
+           
           />
 
           {/* Interactive Player Controls */}

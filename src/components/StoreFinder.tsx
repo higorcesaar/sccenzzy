@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { MapPin, Search, Navigation, Info, ShoppingBag, Instagram, Heart, MessageCircle, ArrowRight } from 'lucide-react';
-import { STORES_PICKUP } from '../data';
+import { STORES_PICKUP } from '../data/catalog';
 
 export default function StoreFinder() {
   const [userCep, setUserCep] = useState('');

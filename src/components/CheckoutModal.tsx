@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, ArrowLeft, CreditCard, QrCode, ClipboardList, CheckCircle2, Loader2, Sparkles, Send, MapPin, Receipt, Check, Copy, ArrowRight } from 'lucide-react';
 import { CartItem, ShippingAddress, PaymentMethod, CheckoutState } from '../types';
-import { STORES_PICKUP } from '../data';
+import { STORES_PICKUP } from '../data/catalog';
 
 interface CheckoutModalProps {
   isOpen: boolean;
