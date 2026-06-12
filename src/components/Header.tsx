@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingBag, Search, Instagram, Heart, Menu, X, ArrowRight, Sparkles, User as UserIcon, LogOut } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link } from '@tanstack/react-router';
 import { Product } from '../types';
 import { useAuth } from '../hooks/useAuth';
 
