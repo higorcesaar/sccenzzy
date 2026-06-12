@@ -774,10 +774,10 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, subtotal, di
                     <div className="bg-stone-50 pt-3 border-t mt-3 border-stone-105 space-y-1">
                       <p className="font-bold text-[10px] uppercase tracking-wider text-gold-500">Endereço para Coleta:</p>
                       <p className="text-neutral-900 leading-tight">
-                        {STORES_PICKUP.find(st => st.id === selectedStoreId)?.name}
+                        {STORES_PICKUP.find((st: any) => st.id === selectedStoreId)?.name}
                       </p>
                       <p className="text-[10px] text-stone-500">
-                        {STORES_PICKUP.find(st => st.id === selectedStoreId)?.address}
+                        {STORES_PICKUP.find((st: any) => st.id === selectedStoreId)?.address}
                       </p>
                     </div>
                   ) : (
