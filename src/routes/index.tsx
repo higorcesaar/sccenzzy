@@ -1,29 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
+import Storefront from "@/components/Storefront";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Your App" },
-      { name: "description", content: "Replace this with a one-sentence description of your app." },
-      { property: "og:title", content: "Your App" },
-      { property: "og:description", content: "Replace this with a one-sentence description of your app." },
+      { title: "Scenzzy — Boutique de Calçados e Bolsas Premium" },
+      { name: "description", content: "Boutique exclusiva de tênis, saltos, bolsas e acessórios femininos em couro premium. Curadoria Scenzzy." },
+      { property: "og:title", content: "Scenzzy — Boutique de Calçados e Bolsas Premium" },
+      { property: "og:description", content: "Curadoria de calçados e bolsas femininas de alta elegância." },
+      { property: "og:type", content: "website" },
     ],
   }),
-  component: Index,
+  component: () => <Storefront view="home" />,
 });
-
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
-  return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
-  );
-}
