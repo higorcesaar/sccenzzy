@@ -366,67 +366,52 @@ export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidad
         onProductSelect={handleProductSelect}
       />
 
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/admin/editor" element={<AdminEditor />} />
-
-        <Route path="/" element={
-          <main>
-            {homeSections.map(renderSection)}
-          </main>
-        } />
-        
-        <Route path="/novidades" element={
-          <main className="min-h-screen animate-fade-in">
-            {renderSection('campaign_banner')}
-            {renderSection('bento')}
-          </main>
-        } />
-
-        <Route path="/sapatos" element={
-          <main className="min-h-screen pt-10 animate-fade-in">
-            {renderSection('tenis')}
-          </main>
-        } />
-
-        <Route path="/bolsas" element={
-          <main className="min-h-screen pt-10 animate-fade-in">
-            {renderSection('bolsas')}
-            {renderSection('acessorios')}
-          </main>
-        } />
-
-        <Route path="/cintos" element={
-          <main className="min-h-screen pt-10 animate-fade-in">
-            {renderSection('cintos')}
-          </main>
-        } />
-
-        <Route path="/promocao" element={
-          <main className="min-h-screen py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto animate-fade-in">
-            <div className="text-center space-y-3 mb-16">
-              <p className="text-[10px] uppercase tracking-widest text-gold-500 font-bold font-display">OFERTAS ESPECIAIS</p>
-              <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-extrabold text-neutral-900 tracking-tight leading-none">PROMOÇÕES SCENZZY</h2>
-              <div className="h-0.5 w-16 bg-gold-400 mt-2 mx-auto" />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-              {filteredProducts.filter(p => p.originalPrice).length > 0 ? (
-                filteredProducts.filter(p => p.originalPrice).map((item, index) => (
-                  <ProductCard key={`${item.id}-${index}-promo`} product={item} onAddToCart={handleAddToCart} onSelect={handleProductSelect} onOpenAIHelper={handleOpenAIHelper} />
-                ))
-              ) : (
-                <div className="col-span-full text-center py-20 text-stone-500 font-sans">
-                  Nenhuma promoção disponível no momento.
-                </div>
-              )}
-            </div>
-            <div className="mt-20">
-              {renderSection('offers')}
-            </div>
-          </main>
-        } />
-      </Routes>
+      {view === 'home' && (
+        <main>{homeSections.map(renderSection)}</main>
+      )}
+      {view === 'novidades' && (
+        <main className="min-h-screen animate-fade-in">
+          {renderSection('campaign_banner')}
+          {renderSection('bento')}
+        </main>
+      )}
+      {view === 'sapatos' && (
+        <main className="min-h-screen pt-10 animate-fade-in">
+          {renderSection('tenis')}
+        </main>
+      )}
+      {view === 'bolsas' && (
+        <main className="min-h-screen pt-10 animate-fade-in">
+          {renderSection('bolsas')}
+          {renderSection('acessorios')}
+        </main>
+      )}
+      {view === 'cintos' && (
+        <main className="min-h-screen pt-10 animate-fade-in">
+          {renderSection('cintos')}
+        </main>
+      )}
+      {view === 'promocao' && (
+        <main className="min-h-screen py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto animate-fade-in">
+          <div className="text-center space-y-3 mb-16">
+            <p className="text-[10px] uppercase tracking-widest text-gold-500 font-bold font-display">OFERTAS ESPECIAIS</p>
+            <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-extrabold text-neutral-900 tracking-tight leading-none">PROMOÇÕES SCENZZY</h2>
+            <div className="h-0.5 w-16 bg-gold-400 mt-2 mx-auto" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {filteredProducts.filter(p => p.originalPrice).length > 0 ? (
+              filteredProducts.filter(p => p.originalPrice).map((item, index) => (
+                <ProductCard key={`${item.id}-${index}-promo`} product={item} onAddToCart={handleAddToCart} onSelect={handleProductSelect} onOpenAIHelper={handleOpenAIHelper} />
+              ))
+            ) : (
+              <div className="col-span-full text-center py-20 text-stone-500 font-sans">
+                Nenhuma promoção disponível no momento.
+              </div>
+            )}
+          </div>
+          <div className="mt-20">{renderSection('offers')}</div>
+        </main>
+      )}
 
       {/* Footer Navigation section */}
       <footer className="bg-white text-stone-600 border-t border-stone-200 py-16 px-6 sm:px-8">
