@@ -408,7 +408,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, subtotal, di
                 <div className="space-y-4 pt-4 border-t border-stone-200">
                   <span className="text-[10px] uppercase tracking-widest text-stone-400 font-bold block mb-1">Selecione o Lounge para Retirada</span>
                   <div className="space-y-3">
-                    {STORES_PICKUP.map((st) => (
+                    {STORES_PICKUP.map((st: any) => (
                       <div
                         key={st.id}
                         onClick={() => setSelectedStoreId(st.id)}
