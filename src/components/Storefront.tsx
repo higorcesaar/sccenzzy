@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
+import { useServerFn } from '@tanstack/react-start';
+import { useQuery } from '@tanstack/react-query';
 import Header from './Header';
 import ProductCard from './ProductCard';
 import CartDrawer from './CartDrawer';
@@ -11,6 +13,7 @@ import AIHelperModal from './AIHelperModal';
 import ProductDetailModal from './ProductDetailModal';
 import { Product, CartItem } from '../types';
 import { PRODUCTS } from '../data/catalog';
+import { listPublicProducts } from '../lib/storefront.functions';
 import { Sparkles, ArrowRight, Instagram, Mail, ShieldCheck, Heart, Star, Award, AwardIcon, Compass, Anchor, Check } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
 import { useAuth } from '../hooks/useAuth';
