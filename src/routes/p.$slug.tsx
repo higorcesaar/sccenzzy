@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { getPublicPageBySlug } from "@/lib/admin/pages.functions";
 import { BlockRenderer } from "@/components/blocks/BlockRenderer";
-import { Header } from "@/components/Header";
+import Header from "@/components/Header";
 import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/p/$slug")({
