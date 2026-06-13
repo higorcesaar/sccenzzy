@@ -343,7 +343,7 @@ export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidad
           </section>
         );
       case 'bento':
-        return <BentoCampanha key="bento" products={PRODUCTS} onSelect={handleProductSelect} />;
+        return <BentoCampanha key="bento" products={mergedCatalog} onSelect={handleProductSelect} />;
       case 'store_finder':
         return <StoreFinder key="store_finder" />;
       case 'newsletter':
@@ -389,7 +389,7 @@ export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidad
         cartCount={cart.reduce((acc, item) => acc + item.quantity, 0)}
         onCartClick={() => setIsCartOpen(true)}
         onSearch={handleSearch}
-        products={PRODUCTS}
+        products={mergedCatalog}
         onProductSelect={handleProductSelect}
       />
 
