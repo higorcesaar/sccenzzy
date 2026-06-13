@@ -124,9 +124,33 @@ export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidad
     setIsCheckoutOpen(true);
   };
 
-  const filteredProducts = PRODUCTS.filter(p => {
+  // Live catalog from Supabase — merged with hardcoded fallback (hardcoded fills any
+  // gaps for products that exist in DB but haven't been given images yet, by slug match).
+  const fetchPublic = useServerFn(listPublicProducts);
+  const { data: dbProducts } = useQuery({
+    queryKey: ['public-products'],
+    queryFn: () => fetchPublic(),
+    staleTime: 30_000,
+  });
+
+  const mergedCatalog: Product[] = (() => {
+    if (!dbProducts || dbProducts.length === 0) return PRODUCTS;
+    const fallbackBySlug = new Map(PRODUCTS.map((p) => [p.id, p]));
+    return dbProducts.map((p: any) => {
+      const fb = fallbackBySlug.get(p.id);
+      return {
+        ...(fb ?? {}),
+        ...p,
+        images: p.images && p.images.length > 0 ? p.images : fb?.images ?? [],
+        features: fb?.features ?? p.features ?? [],
+        sizes: fb?.sizes ?? p.sizes,
+      } as Product;
+    });
+  })();
+
+  const filteredProducts = mergedCatalog.filter(p => {
     if (!searchTerm) return true;
-    return p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.description.toLowerCase().includes(searchTerm.toLowerCase());
+    return p.name.toLowerCase().includes(searchTerm.toLowerCase()) || (p.description ?? '').toLowerCase().includes(searchTerm.toLowerCase());
   });
 
   const tenisList = filteredProducts.filter(p => p.category === 'tenis');
