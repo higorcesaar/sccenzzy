@@ -137,8 +137,8 @@ export default function StoreFinder() {
                     />
                     <div className="absolute inset-0 bg-stone-900/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                       <div className="flex gap-3 text-[10px] font-semibold text-white">
-                        <span className="flex items-center gap-1"><Heart className="h-3 w-3 fill-white" /> {Math.floor(Math.random() * 500) + 100}</span>
-                        <span className="flex items-center gap-1"><MessageCircle className="h-3 w-3 fill-white" /> {Math.floor(Math.random() * 50) + 5}</span>
+                        <span className="flex items-center gap-1"><Heart className="h-3 w-3 fill-white" /> {180 + i * 47}</span>
+                        <span className="flex items-center gap-1"><MessageCircle className="h-3 w-3 fill-white" /> {12 + i * 7}</span>
                       </div>
                     </div>
                   </div>
