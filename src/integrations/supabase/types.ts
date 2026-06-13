@@ -541,6 +541,54 @@ export type Database = {
         }
         Relationships: []
       }
+      scz_banners: {
+        Row: {
+          created_at: string
+          cta_label: string | null
+          ends_at: string | null
+          id: string
+          image_url: string
+          is_active: boolean
+          link_url: string | null
+          location: string
+          position: number
+          starts_at: string | null
+          subtitle: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          cta_label?: string | null
+          ends_at?: string | null
+          id?: string
+          image_url: string
+          is_active?: boolean
+          link_url?: string | null
+          location: string
+          position?: number
+          starts_at?: string | null
+          subtitle?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          cta_label?: string | null
+          ends_at?: string | null
+          id?: string
+          image_url?: string
+          is_active?: boolean
+          link_url?: string | null
+          location?: string
+          position?: number
+          starts_at?: string | null
+          subtitle?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       scz_categories: {
         Row: {
           created_at: string
@@ -548,6 +596,8 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          parent_id: string | null
+          position: number
           slug: string
           sort_order: number
           updated_at: string
@@ -558,6 +608,8 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          parent_id?: string | null
+          position?: number
           slug: string
           sort_order?: number
           updated_at?: string
@@ -568,11 +620,21 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          parent_id?: string | null
+          position?: number
           slug?: string
           sort_order?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "scz_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "scz_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       scz_order_items: {
         Row: {
@@ -667,6 +729,57 @@ export type Database = {
         }
         Relationships: []
       }
+      scz_pages: {
+        Row: {
+          blocks: Json
+          created_at: string
+          created_by: string | null
+          id: string
+          is_system: boolean
+          og_image: string | null
+          published_at: string | null
+          seo_description: string | null
+          seo_keywords: string | null
+          seo_title: string | null
+          slug: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          blocks?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_system?: boolean
+          og_image?: string | null
+          published_at?: string | null
+          seo_description?: string | null
+          seo_keywords?: string | null
+          seo_title?: string | null
+          slug: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          blocks?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_system?: boolean
+          og_image?: string | null
+          published_at?: string | null
+          seo_description?: string | null
+          seo_keywords?: string | null
+          seo_title?: string | null
+          slug?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       scz_product_images: {
         Row: {
           alt: string | null
@@ -707,52 +820,118 @@ export type Database = {
       }
       scz_products: {
         Row: {
+          brand: string | null
           category_id: string | null
+          cost_price: number | null
           created_at: string
+          depth_cm: number | null
           description: string | null
+          height_cm: number | null
           id: string
+          internal_code: string | null
           is_active: boolean
+          is_bestseller: boolean
           is_featured: boolean
+          is_launch: boolean
+          is_on_sale: boolean
           metadata: Json
           name: string
+          og_image: string | null
           price_cents: number
+          promo_price: number | null
           sale_price_cents: number | null
+          seo_description: string | null
+          seo_keywords: string | null
+          seo_title: string | null
+          short_description: string | null
           sku: string | null
           slug: string
           stock: number
+          stock_min: number
+          stock_qty: number
+          stock_reserved: number
+          stock_sold: number
+          subcategory_id: string | null
+          tags: string[] | null
           updated_at: string
+          weight_g: number | null
+          width_cm: number | null
         }
         Insert: {
+          brand?: string | null
           category_id?: string | null
+          cost_price?: number | null
           created_at?: string
+          depth_cm?: number | null
           description?: string | null
+          height_cm?: number | null
           id?: string
+          internal_code?: string | null
           is_active?: boolean
+          is_bestseller?: boolean
           is_featured?: boolean
+          is_launch?: boolean
+          is_on_sale?: boolean
           metadata?: Json
           name: string
+          og_image?: string | null
           price_cents: number
+          promo_price?: number | null
           sale_price_cents?: number | null
+          seo_description?: string | null
+          seo_keywords?: string | null
+          seo_title?: string | null
+          short_description?: string | null
           sku?: string | null
           slug: string
           stock?: number
+          stock_min?: number
+          stock_qty?: number
+          stock_reserved?: number
+          stock_sold?: number
+          subcategory_id?: string | null
+          tags?: string[] | null
           updated_at?: string
+          weight_g?: number | null
+          width_cm?: number | null
         }
         Update: {
+          brand?: string | null
           category_id?: string | null
+          cost_price?: number | null
           created_at?: string
+          depth_cm?: number | null
           description?: string | null
+          height_cm?: number | null
           id?: string
+          internal_code?: string | null
           is_active?: boolean
+          is_bestseller?: boolean
           is_featured?: boolean
+          is_launch?: boolean
+          is_on_sale?: boolean
           metadata?: Json
           name?: string
+          og_image?: string | null
           price_cents?: number
+          promo_price?: number | null
           sale_price_cents?: number | null
+          seo_description?: string | null
+          seo_keywords?: string | null
+          seo_title?: string | null
+          short_description?: string | null
           sku?: string | null
           slug?: string
           stock?: number
+          stock_min?: number
+          stock_qty?: number
+          stock_reserved?: number
+          stock_sold?: number
+          subcategory_id?: string | null
+          tags?: string[] | null
           updated_at?: string
+          weight_g?: number | null
+          width_cm?: number | null
         }
         Relationships: [
           {
@@ -760,6 +939,75 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "scz_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scz_products_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "scz_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scz_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
+      scz_stock_movements: {
+        Row: {
+          created_at: string
+          id: string
+          movement_type: string
+          product_id: string
+          quantity: number
+          reason: string | null
+          reference: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          movement_type: string
+          product_id: string
+          quantity: number
+          reason?: string | null
+          reference?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          movement_type?: string
+          product_id?: string
+          quantity?: number
+          reason?: string | null
+          reference?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scz_stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "scz_products"
             referencedColumns: ["id"]
           },
         ]
