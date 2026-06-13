@@ -19,11 +19,8 @@ import { Route as BolsasRouteImport } from './routes/bolsas'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
-import { Route as AdminPaginasRouteImport } from './routes/admin.paginas'
 import { Route as AdminEstoqueRouteImport } from './routes/admin.estoque'
 import { Route as AdminEditorRouteImport } from './routes/admin.editor'
-import { Route as AdminConfiguracoesRouteImport } from './routes/admin.configuracoes'
-import { Route as AdminBannersRouteImport } from './routes/admin.banners'
 import { Route as AdminProdutosIndexRouteImport } from './routes/admin.produtos.index'
 import { Route as AdminPedidosIndexRouteImport } from './routes/admin.pedidos.index'
 import { Route as AdminClientesIndexRouteImport } from './routes/admin.clientes.index'
@@ -82,11 +79,6 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminPaginasRoute = AdminPaginasRouteImport.update({
-  id: '/paginas',
-  path: '/paginas',
-  getParentRoute: () => AdminRoute,
-} as any)
 const AdminEstoqueRoute = AdminEstoqueRouteImport.update({
   id: '/estoque',
   path: '/estoque',
@@ -95,16 +87,6 @@ const AdminEstoqueRoute = AdminEstoqueRouteImport.update({
 const AdminEditorRoute = AdminEditorRouteImport.update({
   id: '/editor',
   path: '/editor',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminConfiguracoesRoute = AdminConfiguracoesRouteImport.update({
-  id: '/configuracoes',
-  path: '/configuracoes',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminBannersRoute = AdminBannersRouteImport.update({
-  id: '/banners',
-  path: '/banners',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminProdutosIndexRoute = AdminProdutosIndexRouteImport.update({
@@ -153,11 +135,8 @@ export interface FileRoutesByFullPath {
   '/promocao': typeof PromocaoRoute
   '/register': typeof RegisterRoute
   '/sapatos': typeof SapatosRoute
-  '/admin/banners': typeof AdminBannersRoute
-  '/admin/configuracoes': typeof AdminConfiguracoesRoute
   '/admin/editor': typeof AdminEditorRoute
   '/admin/estoque': typeof AdminEstoqueRoute
-  '/admin/paginas': typeof AdminPaginasRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/clientes/$id': typeof AdminClientesIdRoute
   '/admin/pedidos/$id': typeof AdminPedidosIdRoute
@@ -176,11 +155,8 @@ export interface FileRoutesByTo {
   '/promocao': typeof PromocaoRoute
   '/register': typeof RegisterRoute
   '/sapatos': typeof SapatosRoute
-  '/admin/banners': typeof AdminBannersRoute
-  '/admin/configuracoes': typeof AdminConfiguracoesRoute
   '/admin/editor': typeof AdminEditorRoute
   '/admin/estoque': typeof AdminEstoqueRoute
-  '/admin/paginas': typeof AdminPaginasRoute
   '/admin': typeof AdminIndexRoute
   '/admin/clientes/$id': typeof AdminClientesIdRoute
   '/admin/pedidos/$id': typeof AdminPedidosIdRoute
@@ -201,11 +177,8 @@ export interface FileRoutesById {
   '/promocao': typeof PromocaoRoute
   '/register': typeof RegisterRoute
   '/sapatos': typeof SapatosRoute
-  '/admin/banners': typeof AdminBannersRoute
-  '/admin/configuracoes': typeof AdminConfiguracoesRoute
   '/admin/editor': typeof AdminEditorRoute
   '/admin/estoque': typeof AdminEstoqueRoute
-  '/admin/paginas': typeof AdminPaginasRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/clientes/$id': typeof AdminClientesIdRoute
   '/admin/pedidos/$id': typeof AdminPedidosIdRoute
@@ -227,11 +200,8 @@ export interface FileRouteTypes {
     | '/promocao'
     | '/register'
     | '/sapatos'
-    | '/admin/banners'
-    | '/admin/configuracoes'
     | '/admin/editor'
     | '/admin/estoque'
-    | '/admin/paginas'
     | '/admin/'
     | '/admin/clientes/$id'
     | '/admin/pedidos/$id'
@@ -250,11 +220,8 @@ export interface FileRouteTypes {
     | '/promocao'
     | '/register'
     | '/sapatos'
-    | '/admin/banners'
-    | '/admin/configuracoes'
     | '/admin/editor'
     | '/admin/estoque'
-    | '/admin/paginas'
     | '/admin'
     | '/admin/clientes/$id'
     | '/admin/pedidos/$id'
@@ -274,11 +241,8 @@ export interface FileRouteTypes {
     | '/promocao'
     | '/register'
     | '/sapatos'
-    | '/admin/banners'
-    | '/admin/configuracoes'
     | '/admin/editor'
     | '/admin/estoque'
-    | '/admin/paginas'
     | '/admin/'
     | '/admin/clientes/$id'
     | '/admin/pedidos/$id'
@@ -373,13 +337,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/paginas': {
-      id: '/admin/paginas'
-      path: '/paginas'
-      fullPath: '/admin/paginas'
-      preLoaderRoute: typeof AdminPaginasRouteImport
-      parentRoute: typeof AdminRoute
-    }
     '/admin/estoque': {
       id: '/admin/estoque'
       path: '/estoque'
@@ -392,20 +349,6 @@ declare module '@tanstack/react-router' {
       path: '/editor'
       fullPath: '/admin/editor'
       preLoaderRoute: typeof AdminEditorRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/configuracoes': {
-      id: '/admin/configuracoes'
-      path: '/configuracoes'
-      fullPath: '/admin/configuracoes'
-      preLoaderRoute: typeof AdminConfiguracoesRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/banners': {
-      id: '/admin/banners'
-      path: '/banners'
-      fullPath: '/admin/banners'
-      preLoaderRoute: typeof AdminBannersRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/produtos/': {
@@ -461,11 +404,8 @@ declare module '@tanstack/react-router' {
 }
 
 interface AdminRouteChildren {
-  AdminBannersRoute: typeof AdminBannersRoute
-  AdminConfiguracoesRoute: typeof AdminConfiguracoesRoute
   AdminEditorRoute: typeof AdminEditorRoute
   AdminEstoqueRoute: typeof AdminEstoqueRoute
-  AdminPaginasRoute: typeof AdminPaginasRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminClientesIdRoute: typeof AdminClientesIdRoute
   AdminPedidosIdRoute: typeof AdminPedidosIdRoute
@@ -477,11 +417,8 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
-  AdminBannersRoute: AdminBannersRoute,
-  AdminConfiguracoesRoute: AdminConfiguracoesRoute,
   AdminEditorRoute: AdminEditorRoute,
   AdminEstoqueRoute: AdminEstoqueRoute,
-  AdminPaginasRoute: AdminPaginasRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminClientesIdRoute: AdminClientesIdRoute,
   AdminPedidosIdRoute: AdminPedidosIdRoute,
@@ -508,3 +445,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
