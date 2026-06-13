@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
+import { useServerFn } from '@tanstack/react-start';
+import { useQuery } from '@tanstack/react-query';
 import Header from './Header';
 import ProductCard from './ProductCard';
 import CartDrawer from './CartDrawer';
@@ -11,6 +13,7 @@ import AIHelperModal from './AIHelperModal';
 import ProductDetailModal from './ProductDetailModal';
 import { Product, CartItem } from '../types';
 import { PRODUCTS } from '../data/catalog';
+import { listPublicProducts } from '../lib/storefront.functions';
 import { Sparkles, ArrowRight, Instagram, Mail, ShieldCheck, Heart, Star, Award, AwardIcon, Compass, Anchor, Check } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
 import { useAuth } from '../hooks/useAuth';
@@ -121,9 +124,33 @@ export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidad
     setIsCheckoutOpen(true);
   };
 
-  const filteredProducts = PRODUCTS.filter(p => {
+  // Live catalog from Supabase — merged with hardcoded fallback (hardcoded fills any
+  // gaps for products that exist in DB but haven't been given images yet, by slug match).
+  const fetchPublic = useServerFn(listPublicProducts);
+  const { data: dbProducts } = useQuery({
+    queryKey: ['public-products'],
+    queryFn: () => fetchPublic(),
+    staleTime: 30_000,
+  });
+
+  const mergedCatalog: Product[] = (() => {
+    if (!dbProducts || dbProducts.length === 0) return PRODUCTS;
+    const fallbackBySlug = new Map(PRODUCTS.map((p) => [p.id, p]));
+    return dbProducts.map((p: any) => {
+      const fb = fallbackBySlug.get(p.id);
+      return {
+        ...(fb ?? {}),
+        ...p,
+        images: p.images && p.images.length > 0 ? p.images : fb?.images ?? [],
+        features: fb?.features ?? p.features ?? [],
+        sizes: fb?.sizes ?? p.sizes,
+      } as Product;
+    });
+  })();
+
+  const filteredProducts = mergedCatalog.filter(p => {
     if (!searchTerm) return true;
-    return p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.description.toLowerCase().includes(searchTerm.toLowerCase());
+    return p.name.toLowerCase().includes(searchTerm.toLowerCase()) || (p.description ?? '').toLowerCase().includes(searchTerm.toLowerCase());
   });
 
   const tenisList = filteredProducts.filter(p => p.category === 'tenis');
@@ -316,7 +343,7 @@ export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidad
           </section>
         );
       case 'bento':
-        return <BentoCampanha key="bento" products={PRODUCTS} onSelect={handleProductSelect} />;
+        return <BentoCampanha key="bento" products={mergedCatalog} onSelect={handleProductSelect} />;
       case 'store_finder':
         return <StoreFinder key="store_finder" />;
       case 'newsletter':
@@ -362,7 +389,7 @@ export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidad
         cartCount={cart.reduce((acc, item) => acc + item.quantity, 0)}
         onCartClick={() => setIsCartOpen(true)}
         onSearch={handleSearch}
-        products={PRODUCTS}
+        products={mergedCatalog}
         onProductSelect={handleProductSelect}
       />
 

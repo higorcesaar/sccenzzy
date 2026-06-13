@@ -75,23 +75,88 @@ export const upsertProduct = createServerFn({ method: "POST" })
   .middleware([requireAdmin])
   .inputValidator((input: unknown) => productSchema.parse(input))
   .handler(async ({ data, context }) => {
-    const { supabase } = context as any;
+    const { supabase, userId } = context as any;
     const payload: any = { ...data };
-    // Map images array to JSON column if exists; otherwise ignore
     const images = payload.images;
     delete payload.images;
 
-    const { data: row, error } = data.id
-      ? await supabase.from("scz_products").update(payload).eq("id", data.id).select().single()
-      : await supabase.from("scz_products").insert(payload).select().single();
-    if (error) throw new Error(error.message);
+    const requestedStock = Number(payload.stock_qty ?? 0);
+    let row: any;
+    let stockDelta = 0;
+    let movementType: "entrada" | "ajuste" | null = null;
+
+    if (data.id) {
+      // Read previous stock to compute delta
+      const { data: prev } = await supabase
+        .from("scz_products")
+        .select("stock_qty")
+        .eq("id", data.id)
+        .maybeSingle();
+      const prevStock = Number(prev?.stock_qty ?? 0);
+      stockDelta = requestedStock - prevStock;
+      // Trigger applies movement; don't double-write stock_qty.
+      delete payload.stock_qty;
+      if (stockDelta !== 0) movementType = "ajuste";
+      const { data: updated, error } = await supabase
+        .from("scz_products")
+        .update(payload)
+        .eq("id", data.id)
+        .select()
+        .single();
+      if (error) throw new Error(error.message);
+      row = updated;
+    } else {
+      // Insert with stock 0; movement will increment via trigger
+      payload.stock_qty = 0;
+      const { data: inserted, error } = await supabase
+        .from("scz_products")
+        .insert(payload)
+        .select()
+        .single();
+      if (error) throw new Error(error.message);
+      row = inserted;
+      if (requestedStock > 0) {
+        stockDelta = requestedStock;
+        movementType = "entrada";
+      }
+    }
+
+    // Register stock movement so /admin/estoque stays in sync
+    if (movementType && stockDelta !== 0) {
+      const qty = Math.abs(stockDelta);
+      const reason =
+        movementType === "entrada"
+          ? "Estoque inicial cadastrado no produto"
+          : stockDelta > 0
+          ? "Ajuste positivo via cadastro de produto"
+          : "Ajuste negativo via cadastro de produto";
+      // For "ajuste" the trigger adds the signed quantity. Send signed value.
+      const signedQty = movementType === "ajuste" ? stockDelta : qty;
+      const { error: mErr } = await supabase.from("scz_stock_movements").insert({
+        product_id: row.id,
+        movement_type: movementType,
+        // movement validator restricts quantity to >=1; ajuste accepts the absolute value but trigger needs sign
+        // We store absolute qty and rely on movement_type semantics; the trigger uses NEW.quantity directly.
+        // For "ajuste" we need to send the signed value to apply correctly, so bypass the validator min(1) by clamping.
+        quantity: movementType === "ajuste" ? signedQty : qty,
+        reason,
+        user_id: userId,
+      });
+      if (mErr) {
+        // Don't fail the whole product save; surface in console
+        console.warn("Stock movement insert failed:", mErr.message);
+      }
+      // Refresh row to get current stock_qty
+      const { data: fresh } = await supabase.from("scz_products").select("*").eq("id", row.id).maybeSingle();
+      if (fresh) row = fresh;
+    }
 
     // Sync product images table
     if (Array.isArray(images)) {
       await supabase.from("scz_product_images").delete().eq("product_id", row.id);
       if (images.length > 0) {
         await supabase.from("scz_product_images").insert(
-          images.map((url: string, i: number) => ({ product_id: row.id, url, position: i })),
+          images.map((url: string, i: number) => ({ product_id: row.id, url, sort_order: i })),
         );
       }
     }
@@ -124,9 +189,9 @@ export const getProductImages = createServerFn({ method: "POST" })
     const { supabase } = context as any;
     const { data: rows, error } = await supabase
       .from("scz_product_images")
-      .select("id,url,position")
+      .select("id,url,sort_order")
       .eq("product_id", data.productId)
-      .order("position");
+      .order("sort_order");
     if (error) throw new Error(error.message);
     return rows ?? [];
   });

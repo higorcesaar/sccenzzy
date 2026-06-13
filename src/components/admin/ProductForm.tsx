@@ -302,8 +302,19 @@ export function ProductForm({ initial }: { initial?: any }) {
               <Field label="Quantidade mínima (alerta)">
                 <Input type="number" {...form.register("stock_min", { valueAsNumber: true })} />
               </Field>
-              <div className="md:col-span-2 text-xs text-stone-500">
-                Para entradas e saídas após o cadastro, use a tela <strong>Estoque</strong> — todo movimento fica registrado no histórico.
+              <div className="md:col-span-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900 p-3 leading-relaxed">
+                {initial?.id ? (
+                  <>
+                    Ao salvar, qualquer alteração na <strong>Quantidade atual</strong> gera automaticamente uma
+                    movimentação do tipo <strong>Ajuste</strong> no módulo <strong>Estoque</strong>, mantendo o
+                    histórico completo.
+                  </>
+                ) : (
+                  <>
+                    A quantidade informada aqui será lançada como movimentação <strong>Entrada</strong> no módulo{" "}
+                    <strong>Estoque</strong> assim que o produto for criado.
+                  </>
+                )}
               </div>
             </CardContent>
           </Card>
