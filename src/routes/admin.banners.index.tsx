@@ -42,7 +42,7 @@ const empty = {
 };
 
 function BannersPage() {
-  const fetch = useServerFn(listBanners);
+  const fetchBanners = useServerFn(listBanners);
   const save = useServerFn(upsertBanner);
   const del = useServerFn(deleteBanner);
   const getUploadUrl = useServerFn(getR2UploadUrl);
@@ -54,7 +54,7 @@ function BannersPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin", "banners"],
-    queryFn: () => fetch(),
+    queryFn: () => fetchBanners(),
   });
 
   const saveMut = useMutation({
@@ -100,7 +100,7 @@ function BannersPage() {
     setOpen(true);
   }
 
-  const grouped = (data ?? []).reduce<Record<string, any[]>>((acc, b: any) => {
+  const grouped = ((data ?? []) as any[]).reduce((acc, b: any) => {
     (acc[b.location] ??= []).push(b);
     return acc;
   }, {});
