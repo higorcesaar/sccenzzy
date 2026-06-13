@@ -140,8 +140,8 @@ function DashboardPage() {
                 <XAxis dataKey="date" tickFormatter={(d) => d.slice(5)} fontSize={11} />
                 <YAxis fontSize={11} tickFormatter={(v) => `R$${v}`} />
                 <Tooltip
-                  formatter={(v: number) => brl(Number(v))}
-                  labelFormatter={(l) => `Dia ${l}`}
+                  formatter={(v: any) => brl(Number(v))}
+                  labelFormatter={(l: any) => `Dia ${l}`}
                 />
                 <Area type="monotone" dataKey="total" stroke="#d97706" fill="url(#colorTotal)" />
               </AreaChart>

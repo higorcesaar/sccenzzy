@@ -246,7 +246,7 @@ export function ProductForm({ initial }: { initial?: any }) {
 
               {imgs.length > 0 && (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {imgs.map((url, i) => (
+                  {imgs.map((url: string, i: number) => (
                     <div key={url} className="relative group rounded-lg overflow-hidden border border-stone-200 bg-stone-50 aspect-square">
                       {/\.(mp4|mov|webm)$/i.test(url) ? (
                         <video src={url} className="w-full h-full object-cover" muted />
@@ -255,7 +255,7 @@ export function ProductForm({ initial }: { initial?: any }) {
                       )}
                       <button
                         type="button"
-                        onClick={() => setImages(imgs.filter((_, j) => j !== i))}
+                        onClick={() => setImages(imgs.filter((_: string, j: number) => j !== i))}
                         className="absolute top-1 right-1 h-6 w-6 rounded-full bg-white/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
                       >
                         <X className="h-3 w-3" />

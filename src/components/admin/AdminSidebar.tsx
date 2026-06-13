@@ -26,13 +26,9 @@ import {
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/useAuth";
 
-const groups = [
-  {
-    label: "Geral",
-    items: [
-      { title: "Dashboard", url: "/admin", icon: LayoutDashboard, exact: true },
-    ],
-  },
+type Item = { title: string; url: string; icon: any; exact?: boolean };
+const groups: { label: string; items: Item[] }[] = [
+  { label: "Geral", items: [{ title: "Dashboard", url: "/admin", icon: LayoutDashboard, exact: true }] },
   {
     label: "Catálogo",
     items: [
@@ -55,10 +51,7 @@ const groups = [
       { title: "Construtor", url: "/admin/editor", icon: Wand2 },
     ],
   },
-  {
-    label: "Sistema",
-    items: [{ title: "Configurações", url: "/admin/configuracoes", icon: Settings }],
-  },
+  { label: "Sistema", items: [{ title: "Configurações", url: "/admin/configuracoes", icon: Settings }] },
 ];
 
 export function AdminSidebar() {
