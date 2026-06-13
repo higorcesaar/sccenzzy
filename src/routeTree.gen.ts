@@ -19,16 +19,18 @@ import { Route as BolsasRouteImport } from './routes/bolsas'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
-import { Route as AdminPedidosRouteImport } from './routes/admin.pedidos'
 import { Route as AdminPaginasRouteImport } from './routes/admin.paginas'
 import { Route as AdminEstoqueRouteImport } from './routes/admin.estoque'
 import { Route as AdminEditorRouteImport } from './routes/admin.editor'
 import { Route as AdminConfiguracoesRouteImport } from './routes/admin.configuracoes'
-import { Route as AdminClientesRouteImport } from './routes/admin.clientes'
 import { Route as AdminBannersRouteImport } from './routes/admin.banners'
 import { Route as AdminProdutosIndexRouteImport } from './routes/admin.produtos.index'
+import { Route as AdminPedidosIndexRouteImport } from './routes/admin.pedidos.index'
+import { Route as AdminClientesIndexRouteImport } from './routes/admin.clientes.index'
 import { Route as AdminProdutosNovoRouteImport } from './routes/admin.produtos.novo'
 import { Route as AdminProdutosIdRouteImport } from './routes/admin.produtos.$id'
+import { Route as AdminPedidosIdRouteImport } from './routes/admin.pedidos.$id'
+import { Route as AdminClientesIdRouteImport } from './routes/admin.clientes.$id'
 
 const SapatosRoute = SapatosRouteImport.update({
   id: '/sapatos',
@@ -80,11 +82,6 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminPedidosRoute = AdminPedidosRouteImport.update({
-  id: '/pedidos',
-  path: '/pedidos',
-  getParentRoute: () => AdminRoute,
-} as any)
 const AdminPaginasRoute = AdminPaginasRouteImport.update({
   id: '/paginas',
   path: '/paginas',
@@ -105,11 +102,6 @@ const AdminConfiguracoesRoute = AdminConfiguracoesRouteImport.update({
   path: '/configuracoes',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminClientesRoute = AdminClientesRouteImport.update({
-  id: '/clientes',
-  path: '/clientes',
-  getParentRoute: () => AdminRoute,
-} as any)
 const AdminBannersRoute = AdminBannersRouteImport.update({
   id: '/banners',
   path: '/banners',
@@ -120,6 +112,16 @@ const AdminProdutosIndexRoute = AdminProdutosIndexRouteImport.update({
   path: '/produtos/',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminPedidosIndexRoute = AdminPedidosIndexRouteImport.update({
+  id: '/pedidos/',
+  path: '/pedidos/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminClientesIndexRoute = AdminClientesIndexRouteImport.update({
+  id: '/clientes/',
+  path: '/clientes/',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminProdutosNovoRoute = AdminProdutosNovoRouteImport.update({
   id: '/produtos/novo',
   path: '/produtos/novo',
@@ -128,6 +130,16 @@ const AdminProdutosNovoRoute = AdminProdutosNovoRouteImport.update({
 const AdminProdutosIdRoute = AdminProdutosIdRouteImport.update({
   id: '/produtos/$id',
   path: '/produtos/$id',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPedidosIdRoute = AdminPedidosIdRouteImport.update({
+  id: '/pedidos/$id',
+  path: '/pedidos/$id',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminClientesIdRoute = AdminClientesIdRouteImport.update({
+  id: '/clientes/$id',
+  path: '/clientes/$id',
   getParentRoute: () => AdminRoute,
 } as any)
 
@@ -142,15 +154,17 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/sapatos': typeof SapatosRoute
   '/admin/banners': typeof AdminBannersRoute
-  '/admin/clientes': typeof AdminClientesRoute
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
   '/admin/editor': typeof AdminEditorRoute
   '/admin/estoque': typeof AdminEstoqueRoute
   '/admin/paginas': typeof AdminPaginasRoute
-  '/admin/pedidos': typeof AdminPedidosRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/clientes/$id': typeof AdminClientesIdRoute
+  '/admin/pedidos/$id': typeof AdminPedidosIdRoute
   '/admin/produtos/$id': typeof AdminProdutosIdRoute
   '/admin/produtos/novo': typeof AdminProdutosNovoRoute
+  '/admin/clientes/': typeof AdminClientesIndexRoute
+  '/admin/pedidos/': typeof AdminPedidosIndexRoute
   '/admin/produtos/': typeof AdminProdutosIndexRoute
 }
 export interface FileRoutesByTo {
@@ -163,15 +177,17 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/sapatos': typeof SapatosRoute
   '/admin/banners': typeof AdminBannersRoute
-  '/admin/clientes': typeof AdminClientesRoute
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
   '/admin/editor': typeof AdminEditorRoute
   '/admin/estoque': typeof AdminEstoqueRoute
   '/admin/paginas': typeof AdminPaginasRoute
-  '/admin/pedidos': typeof AdminPedidosRoute
   '/admin': typeof AdminIndexRoute
+  '/admin/clientes/$id': typeof AdminClientesIdRoute
+  '/admin/pedidos/$id': typeof AdminPedidosIdRoute
   '/admin/produtos/$id': typeof AdminProdutosIdRoute
   '/admin/produtos/novo': typeof AdminProdutosNovoRoute
+  '/admin/clientes': typeof AdminClientesIndexRoute
+  '/admin/pedidos': typeof AdminPedidosIndexRoute
   '/admin/produtos': typeof AdminProdutosIndexRoute
 }
 export interface FileRoutesById {
@@ -186,15 +202,17 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/sapatos': typeof SapatosRoute
   '/admin/banners': typeof AdminBannersRoute
-  '/admin/clientes': typeof AdminClientesRoute
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
   '/admin/editor': typeof AdminEditorRoute
   '/admin/estoque': typeof AdminEstoqueRoute
   '/admin/paginas': typeof AdminPaginasRoute
-  '/admin/pedidos': typeof AdminPedidosRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/clientes/$id': typeof AdminClientesIdRoute
+  '/admin/pedidos/$id': typeof AdminPedidosIdRoute
   '/admin/produtos/$id': typeof AdminProdutosIdRoute
   '/admin/produtos/novo': typeof AdminProdutosNovoRoute
+  '/admin/clientes/': typeof AdminClientesIndexRoute
+  '/admin/pedidos/': typeof AdminPedidosIndexRoute
   '/admin/produtos/': typeof AdminProdutosIndexRoute
 }
 export interface FileRouteTypes {
@@ -210,15 +228,17 @@ export interface FileRouteTypes {
     | '/register'
     | '/sapatos'
     | '/admin/banners'
-    | '/admin/clientes'
     | '/admin/configuracoes'
     | '/admin/editor'
     | '/admin/estoque'
     | '/admin/paginas'
-    | '/admin/pedidos'
     | '/admin/'
+    | '/admin/clientes/$id'
+    | '/admin/pedidos/$id'
     | '/admin/produtos/$id'
     | '/admin/produtos/novo'
+    | '/admin/clientes/'
+    | '/admin/pedidos/'
     | '/admin/produtos/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -231,15 +251,17 @@ export interface FileRouteTypes {
     | '/register'
     | '/sapatos'
     | '/admin/banners'
-    | '/admin/clientes'
     | '/admin/configuracoes'
     | '/admin/editor'
     | '/admin/estoque'
     | '/admin/paginas'
-    | '/admin/pedidos'
     | '/admin'
+    | '/admin/clientes/$id'
+    | '/admin/pedidos/$id'
     | '/admin/produtos/$id'
     | '/admin/produtos/novo'
+    | '/admin/clientes'
+    | '/admin/pedidos'
     | '/admin/produtos'
   id:
     | '__root__'
@@ -253,15 +275,17 @@ export interface FileRouteTypes {
     | '/register'
     | '/sapatos'
     | '/admin/banners'
-    | '/admin/clientes'
     | '/admin/configuracoes'
     | '/admin/editor'
     | '/admin/estoque'
     | '/admin/paginas'
-    | '/admin/pedidos'
     | '/admin/'
+    | '/admin/clientes/$id'
+    | '/admin/pedidos/$id'
     | '/admin/produtos/$id'
     | '/admin/produtos/novo'
+    | '/admin/clientes/'
+    | '/admin/pedidos/'
     | '/admin/produtos/'
   fileRoutesById: FileRoutesById
 }
@@ -349,13 +373,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/pedidos': {
-      id: '/admin/pedidos'
-      path: '/pedidos'
-      fullPath: '/admin/pedidos'
-      preLoaderRoute: typeof AdminPedidosRouteImport
-      parentRoute: typeof AdminRoute
-    }
     '/admin/paginas': {
       id: '/admin/paginas'
       path: '/paginas'
@@ -384,13 +401,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminConfiguracoesRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/clientes': {
-      id: '/admin/clientes'
-      path: '/clientes'
-      fullPath: '/admin/clientes'
-      preLoaderRoute: typeof AdminClientesRouteImport
-      parentRoute: typeof AdminRoute
-    }
     '/admin/banners': {
       id: '/admin/banners'
       path: '/banners'
@@ -403,6 +413,20 @@ declare module '@tanstack/react-router' {
       path: '/produtos'
       fullPath: '/admin/produtos/'
       preLoaderRoute: typeof AdminProdutosIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/pedidos/': {
+      id: '/admin/pedidos/'
+      path: '/pedidos'
+      fullPath: '/admin/pedidos/'
+      preLoaderRoute: typeof AdminPedidosIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/clientes/': {
+      id: '/admin/clientes/'
+      path: '/clientes'
+      fullPath: '/admin/clientes/'
+      preLoaderRoute: typeof AdminClientesIndexRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/produtos/novo': {
@@ -419,34 +443,52 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminProdutosIdRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/pedidos/$id': {
+      id: '/admin/pedidos/$id'
+      path: '/pedidos/$id'
+      fullPath: '/admin/pedidos/$id'
+      preLoaderRoute: typeof AdminPedidosIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/clientes/$id': {
+      id: '/admin/clientes/$id'
+      path: '/clientes/$id'
+      fullPath: '/admin/clientes/$id'
+      preLoaderRoute: typeof AdminClientesIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
 interface AdminRouteChildren {
   AdminBannersRoute: typeof AdminBannersRoute
-  AdminClientesRoute: typeof AdminClientesRoute
   AdminConfiguracoesRoute: typeof AdminConfiguracoesRoute
   AdminEditorRoute: typeof AdminEditorRoute
   AdminEstoqueRoute: typeof AdminEstoqueRoute
   AdminPaginasRoute: typeof AdminPaginasRoute
-  AdminPedidosRoute: typeof AdminPedidosRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminClientesIdRoute: typeof AdminClientesIdRoute
+  AdminPedidosIdRoute: typeof AdminPedidosIdRoute
   AdminProdutosIdRoute: typeof AdminProdutosIdRoute
   AdminProdutosNovoRoute: typeof AdminProdutosNovoRoute
+  AdminClientesIndexRoute: typeof AdminClientesIndexRoute
+  AdminPedidosIndexRoute: typeof AdminPedidosIndexRoute
   AdminProdutosIndexRoute: typeof AdminProdutosIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminBannersRoute: AdminBannersRoute,
-  AdminClientesRoute: AdminClientesRoute,
   AdminConfiguracoesRoute: AdminConfiguracoesRoute,
   AdminEditorRoute: AdminEditorRoute,
   AdminEstoqueRoute: AdminEstoqueRoute,
   AdminPaginasRoute: AdminPaginasRoute,
-  AdminPedidosRoute: AdminPedidosRoute,
   AdminIndexRoute: AdminIndexRoute,
+  AdminClientesIdRoute: AdminClientesIdRoute,
+  AdminPedidosIdRoute: AdminPedidosIdRoute,
   AdminProdutosIdRoute: AdminProdutosIdRoute,
   AdminProdutosNovoRoute: AdminProdutosNovoRoute,
+  AdminClientesIndexRoute: AdminClientesIndexRoute,
+  AdminPedidosIndexRoute: AdminPedidosIndexRoute,
   AdminProdutosIndexRoute: AdminProdutosIndexRoute,
 }
 
