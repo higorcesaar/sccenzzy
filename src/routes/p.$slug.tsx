@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { getPublicPageBySlug } from "@/lib/admin/pages.functions";
 import { BlockRenderer } from "@/components/blocks/BlockRenderer";
-import Header from "@/components/Header";
+import { Link } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/p/$slug")({
@@ -49,7 +49,18 @@ function PublicPage() {
 
   return (
     <div className="min-h-screen bg-[#FAF9F6]">
-      <Header />
+      <header className="border-b border-stone-200 bg-white">
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+          <Link to="/" className="font-serif text-2xl font-extrabold tracking-tight">
+            Scenzzy
+          </Link>
+          <nav className="flex items-center gap-6 text-xs uppercase tracking-widest">
+            <Link to="/sapatos">Sapatos</Link>
+            <Link to="/bolsas">Bolsas</Link>
+            <Link to="/cintos">Cintos</Link>
+          </nav>
+        </div>
+      </header>
       <BlockRenderer blocks={(data.blocks as any) || []} />
     </div>
   );
