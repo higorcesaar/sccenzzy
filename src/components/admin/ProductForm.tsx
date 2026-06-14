@@ -198,16 +198,34 @@ export function ProductForm({ initial }: { initial?: any }) {
   const selectedSection = form.watch("section");
   const sectionInfo = SECTIONS.find((s) => s.slug === selectedSection);
 
+  const FIELD_LABELS: Record<string, string> = {
+    name: "Nome do produto",
+    section: "Aba da loja",
+    price_brl: "Preço de venda",
+  };
+
+  function onInvalid(errors: any) {
+    const missing = Object.keys(errors)
+      .map((k) => FIELD_LABELS[k] || k)
+      .join(", ");
+    toast.error(`Não foi possível publicar. Verifique: ${missing}`, { duration: 6000 });
+  }
+
   return (
-    <form onSubmit={form.handleSubmit((v) => mut.mutate(v))} className="space-y-6">
+    <form onSubmit={form.handleSubmit((v) => mut.mutate(v), onInvalid)} className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="font-serif text-2xl font-bold text-neutral-900">
           {initial?.id ? "Editar produto" : "Novo produto"}
         </h1>
-        <Button type="submit" disabled={mut.isPending} className="bg-amber-600 hover:bg-amber-700">
-          {mut.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
-          Salvar e publicar
-        </Button>
+        <div className="flex flex-col items-end gap-1">
+          <Button type="submit" disabled={mut.isPending} className="bg-amber-600 hover:bg-amber-700">
+            {mut.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
+            Salvar e publicar
+          </Button>
+          <p className="text-[10px] text-stone-500">
+            Obrigatórios: Nome · Aba da loja · Preço
+          </p>
+        </div>
       </div>
 
       <Tabs defaultValue="geral" className="w-full">
