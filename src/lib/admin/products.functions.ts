@@ -94,9 +94,39 @@ export const upsertProduct = createServerFn({ method: "POST" })
     const payload: any = { ...data };
     const images = payload.images;
     delete payload.images;
+    const section: SectionSlug | null | undefined = payload.section;
+    delete payload.section;
 
-    const requestedStock = Number(payload.stock_qty ?? 0);
-    let row: any;
+    // Resolve section -> category_id (overrides explicit category_id)
+    if (section) {
+      const { data: cat } = await supabase
+        .from("scz_categories")
+        .select("id")
+        .eq("slug", section)
+        .maybeSingle();
+      if (cat?.id) payload.category_id = cat.id;
+    }
+
+    // Auto-generate slug from name if blank, ensure uniqueness
+    if (!payload.slug || payload.slug.trim() === "") {
+      const base = slugify(payload.name) || `produto-${Date.now()}`;
+      let candidate = base;
+      let n = 1;
+      // try a few suffixes to avoid collision
+      while (true) {
+        const { data: clash } = await supabase
+          .from("scz_products")
+          .select("id")
+          .eq("slug", candidate)
+          .maybeSingle();
+        if (!clash || (data.id && clash.id === data.id)) break;
+        n += 1;
+        candidate = `${base}-${n}`;
+        if (n > 50) break;
+      }
+      payload.slug = candidate;
+    }
+
     let stockDelta = 0;
     let movementType: "entrada" | "ajuste" | null = null;
 
