@@ -127,8 +127,11 @@ export const upsertProduct = createServerFn({ method: "POST" })
       payload.slug = candidate;
     }
 
+    const requestedStock = Number(payload.stock_qty ?? 0);
+    let row: any;
     let stockDelta = 0;
     let movementType: "entrada" | "ajuste" | null = null;
+
 
     if (data.id) {
       // Read previous stock to compute delta
