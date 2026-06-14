@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -6,7 +6,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { upsertProduct, listCategories, getProductImages } from "@/lib/admin/products.functions";
+import { upsertProduct, getProductImages } from "@/lib/admin/products.functions";
 import { getR2UploadUrl } from "@/lib/r2.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,24 +18,35 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, Upload, X, Save } from "lucide-react";
 
+const SECTIONS = [
+  { slug: "tenis", label: "Tênis", page: "/sapatos" },
+  { slug: "salto", label: "Saltos / Sapatos", page: "/sapatos" },
+  { slug: "bolsa", label: "Bolsas", page: "/bolsas" },
+  { slug: "cinto", label: "Cintos", page: "/cintos" },
+  { slug: "acessorio", label: "Acessórios", page: "/bolsas" },
+] as const;
+
+type SectionSlug = (typeof SECTIONS)[number]["slug"];
+
 const schema = z.object({
-  name: z.string().min(1, "Nome obrigatório"),
-  slug: z.string().min(1).regex(/^[a-z0-9-]+$/, "use apenas a-z 0-9 -"),
+  name: z.string().min(1, "Informe o nome do produto"),
+  slug: z.string().optional(),
+  section: z.enum(["tenis", "salto", "bolsa", "cinto", "acessorio"], {
+    required_error: "Escolha em qual aba o produto aparece",
+  }),
   sku: z.string().optional(),
-  internal_code: z.string().optional(),
   brand: z.string().optional(),
-  category_id: z.string().optional(),
   short_description: z.string().optional(),
   description: z.string().optional(),
-  price_brl: z.number().min(0),
+  price_brl: z.number({ invalid_type_error: "Informe o preço" }).min(0),
   cost_price: z.number().min(0).optional(),
   promo_price: z.number().min(0).optional(),
   weight_g: z.number().int().min(0).optional(),
   width_cm: z.number().min(0).optional(),
   height_cm: z.number().min(0).optional(),
   depth_cm: z.number().min(0).optional(),
-  stock_qty: z.number().int().min(0),
-  stock_min: z.number().int().min(0),
+  stock_qty: z.number().int().min(0).optional(),
+  stock_min: z.number().int().min(0).optional(),
   seo_title: z.string().optional(),
   seo_description: z.string().optional(),
   seo_keywords: z.string().optional(),
@@ -48,15 +59,25 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
+// Heuristic to default the section selector based on the initial product's category slug.
+function detectSection(initial: any): SectionSlug | undefined {
+  const slug = initial?.scz_categories?.slug || initial?.category_slug;
+  if (!slug) return undefined;
+  if (slug === "tenis") return "tenis";
+  if (slug === "salto" || slug === "sapatos") return "salto";
+  if (slug === "bolsa" || slug === "bolsas") return "bolsa";
+  if (slug === "cinto" || slug === "cintos") return "cinto";
+  if (slug === "acessorio" || slug === "acessorios") return "acessorio";
+  return undefined;
+}
+
 export function ProductForm({ initial }: { initial?: any }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const save = useServerFn(upsertProduct);
   const getUploadUrl = useServerFn(getR2UploadUrl);
-  const fetchCats = useServerFn(listCategories);
   const fetchImages = useServerFn(getProductImages);
 
-  const { data: cats } = useQuery({ queryKey: ["admin", "categories"], queryFn: () => fetchCats() });
   const { data: existingImages } = useQuery({
     queryKey: ["admin", "product-images", initial?.id],
     queryFn: () => fetchImages({ data: { productId: initial.id } }),
@@ -66,20 +87,20 @@ export function ProductForm({ initial }: { initial?: any }) {
   const [images, setImages] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
 
-  // hydrate images on first load
-  useState(() => {
-    if (existingImages && images.length === 0) setImages(existingImages.map((i: any) => i.url));
-  });
+  useEffect(() => {
+    if (existingImages && images.length === 0) {
+      setImages(existingImages.map((i: any) => i.url));
+    }
+  }, [existingImages]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       name: initial?.name ?? "",
       slug: initial?.slug ?? "",
+      section: detectSection(initial),
       sku: initial?.sku ?? "",
-      internal_code: initial?.internal_code ?? "",
       brand: initial?.brand ?? "",
-      category_id: initial?.category_id ?? undefined,
       short_description: initial?.short_description ?? "",
       description: initial?.description ?? "",
       price_brl: initial ? Number(initial.price_cents) / 100 : 0,
@@ -137,11 +158,10 @@ export function ProductForm({ initial }: { initial?: any }) {
       const payload: any = {
         ...(initial?.id ? { id: initial.id } : {}),
         name: v.name,
-        slug: v.slug,
+        slug: v.slug?.trim() || undefined, // server auto-generates from name
+        section: v.section,
         sku: v.sku || null,
-        internal_code: v.internal_code || null,
         brand: v.brand || null,
-        category_id: v.category_id || null,
         short_description: v.short_description || null,
         description: v.description || null,
         price_cents: Math.round(v.price_brl * 100),
@@ -151,8 +171,8 @@ export function ProductForm({ initial }: { initial?: any }) {
         width_cm: v.width_cm ?? null,
         height_cm: v.height_cm ?? null,
         depth_cm: v.depth_cm ?? null,
-        stock_qty: v.stock_qty,
-        stock_min: v.stock_min,
+        stock_qty: v.stock_qty ?? 0,
+        stock_min: v.stock_min ?? 0,
         seo_title: v.seo_title || null,
         seo_description: v.seo_description || null,
         seo_keywords: v.seo_keywords || null,
@@ -166,25 +186,26 @@ export function ProductForm({ initial }: { initial?: any }) {
       return save({ data: payload });
     },
     onSuccess: (row: any) => {
-      toast.success("Produto salvo");
+      toast.success("Produto salvo e publicado na loja");
       qc.invalidateQueries({ queryKey: ["admin", "products"] });
+      qc.invalidateQueries({ queryKey: ["public-products"] });
       if (!initial?.id) navigate({ to: "/admin/produtos/$id", params: { id: row.id } });
     },
     onError: (e: any) => toast.error(e?.message || "Erro ao salvar"),
   });
 
+  const selectedSection = form.watch("section");
+  const sectionInfo = SECTIONS.find((s) => s.slug === selectedSection);
+
   return (
-    <form
-      onSubmit={form.handleSubmit((v) => mut.mutate(v))}
-      className="space-y-6"
-    >
+    <form onSubmit={form.handleSubmit((v) => mut.mutate(v))} className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="font-serif text-2xl font-bold text-neutral-900">
           {initial?.id ? "Editar produto" : "Novo produto"}
         </h1>
         <Button type="submit" disabled={mut.isPending} className="bg-amber-600 hover:bg-amber-700">
           {mut.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
-          Salvar
+          Salvar e publicar
         </Button>
       </div>
 
@@ -202,31 +223,44 @@ export function ProductForm({ initial }: { initial?: any }) {
           <Card>
             <CardContent className="space-y-4 pt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Field label="Nome *" error={form.formState.errors.name?.message}>
-                  <Input {...form.register("name")} />
+                <Field label="Nome do produto *" error={form.formState.errors.name?.message}>
+                  <Input
+                    {...form.register("name")}
+                    placeholder="Ex: Tênis Couro Sofia"
+                    autoFocus
+                  />
                 </Field>
-                <Field label="Slug (URL) *" error={form.formState.errors.slug?.message}>
-                  <Input {...form.register("slug")} placeholder="ex: tenis-couro-classic" />
-                </Field>
-                <Field label="SKU"><Input {...form.register("sku")} /></Field>
-                <Field label="Código interno"><Input {...form.register("internal_code")} /></Field>
-                <Field label="Marca"><Input {...form.register("brand")} /></Field>
-                <Field label="Categoria">
-                  <Select value={form.watch("category_id") ?? ""} onValueChange={(v) => form.setValue("category_id", v || undefined)}>
-                    <SelectTrigger><SelectValue placeholder="Selecione…" /></SelectTrigger>
+                <Field label="Aba da loja *" error={form.formState.errors.section?.message as string}>
+                  <Select
+                    value={selectedSection ?? ""}
+                    onValueChange={(v) => form.setValue("section", v as SectionSlug, { shouldValidate: true })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Onde aparece no site?" /></SelectTrigger>
                     <SelectContent>
-                      {(cats ?? []).map((c: any) => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      {SECTIONS.map((s) => (
+                        <SelectItem key={s.slug} value={s.slug}>
+                          {s.label} <span className="text-stone-400 text-xs ml-1">({s.page})</span>
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  {sectionInfo && (
+                    <p className="text-[11px] text-stone-500 mt-1">
+                      Aparecerá na página <strong>{sectionInfo.page}</strong> e na home.
+                    </p>
+                  )}
+                </Field>
+                <Field label="SKU (opcional)"><Input {...form.register("sku")} placeholder="Código de barras / referência" /></Field>
+                <Field label="Marca (opcional)"><Input {...form.register("brand")} /></Field>
+                <Field label="Slug / URL (gerado automático se vazio)">
+                  <Input {...form.register("slug")} placeholder="deixe em branco para gerar do nome" />
                 </Field>
               </div>
-              <Field label="Descrição curta">
-                <Textarea rows={2} {...form.register("short_description")} maxLength={500} />
+              <Field label="Descrição curta (opcional)">
+                <Textarea rows={2} {...form.register("short_description")} maxLength={500} placeholder="Aparece nos cards de produto" />
               </Field>
-              <Field label="Descrição completa">
-                <Textarea rows={6} {...form.register("description")} />
+              <Field label="Descrição completa (opcional)">
+                <Textarea rows={6} {...form.register("description")} placeholder="Aparece na página de detalhes" />
               </Field>
             </CardContent>
           </Card>
@@ -276,13 +310,13 @@ export function ProductForm({ initial }: { initial?: any }) {
         <TabsContent value="preco">
           <Card>
             <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-6">
-              <Field label="Preço de venda (R$) *">
+              <Field label="Preço de venda (R$) *" error={form.formState.errors.price_brl?.message as string}>
                 <Input type="number" step="0.01" {...form.register("price_brl", { valueAsNumber: true })} />
               </Field>
-              <Field label="Preço promocional (R$)">
+              <Field label="Preço promocional (R$) — opcional">
                 <Input type="number" step="0.01" {...form.register("promo_price", { valueAsNumber: true })} />
               </Field>
-              <Field label="Custo (R$)">
+              <Field label="Custo (R$) — opcional">
                 <Input type="number" step="0.01" {...form.register("cost_price", { valueAsNumber: true })} />
               </Field>
               <Field label="Peso (g)"><Input type="number" {...form.register("weight_g", { valueAsNumber: true })} /></Field>
@@ -306,12 +340,11 @@ export function ProductForm({ initial }: { initial?: any }) {
                 {initial?.id ? (
                   <>
                     Ao salvar, qualquer alteração na <strong>Quantidade atual</strong> gera automaticamente uma
-                    movimentação do tipo <strong>Ajuste</strong> no módulo <strong>Estoque</strong>, mantendo o
-                    histórico completo.
+                    movimentação do tipo <strong>Ajuste</strong> no módulo <strong>Estoque</strong>.
                   </>
                 ) : (
                   <>
-                    A quantidade informada aqui será lançada como movimentação <strong>Entrada</strong> no módulo{" "}
+                    A quantidade informada será lançada como movimentação <strong>Entrada</strong> no módulo{" "}
                     <strong>Estoque</strong> assim que o produto for criado.
                   </>
                 )}
@@ -333,10 +366,10 @@ export function ProductForm({ initial }: { initial?: any }) {
         <TabsContent value="flags">
           <Card>
             <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-6">
-              <Flag label="Produto ativo" name="is_active" form={form} />
+              <Flag label="Produto ativo (visível no site)" name="is_active" form={form} />
               <Flag label="Em destaque" name="is_featured" form={form} />
-              <Flag label="Lançamento" name="is_launch" form={form} />
-              <Flag label="Em promoção" name="is_on_sale" form={form} />
+              <Flag label="Lançamento (aba Novidades)" name="is_launch" form={form} />
+              <Flag label="Em promoção (aba Promoção)" name="is_on_sale" form={form} />
               <Flag label="Mais vendido" name="is_bestseller" form={form} />
             </CardContent>
           </Card>
