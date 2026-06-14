@@ -1,13 +1,20 @@
 import { createServerFn } from "@tanstack/react-start";
 
 /**
- * Public catalog listing — no auth. Returns active products mapped
- * to the storefront `Product` shape used by Storefront.tsx.
+ * Public catalog listing — no auth required. Uses the publishable (anon)
+ * key so it works without SUPABASE_SERVICE_ROLE_KEY. RLS on scz_products
+ * already allows anon to read rows where is_active = true.
  */
 export const listPublicProducts = createServerFn({ method: "GET" }).handler(async () => {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { createClient } = await import("@supabase/supabase-js");
+  const url = process.env.SUPABASE_URL!;
+  const key = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY!;
+  if (!url || !key) {
+    throw new Error("Supabase não configurado (SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY).");
+  }
+  const supabase = createClient(url, key, { auth: { persistSession: false } });
 
-  const { data: rows, error } = await supabaseAdmin
+  const { data: rows, error } = await supabase
     .from("scz_products")
     .select(
       "id,slug,name,description,short_description,price_cents,promo_price,stock_qty,is_on_sale,is_featured,is_launch,is_bestseller,tags,category_id,scz_categories(slug)",
@@ -17,9 +24,9 @@ export const listPublicProducts = createServerFn({ method: "GET" }).handler(asyn
   if (error) throw new Error(error.message);
 
   const ids = (rows ?? []).map((r: any) => r.id);
-  let imagesByProduct: Record<string, string[]> = {};
+  const imagesByProduct: Record<string, string[]> = {};
   if (ids.length > 0) {
-    const { data: imgs } = await supabaseAdmin
+    const { data: imgs } = await supabase
       .from("scz_product_images")
       .select("product_id,url,sort_order")
       .in("product_id", ids)
@@ -31,7 +38,6 @@ export const listPublicProducts = createServerFn({ method: "GET" }).handler(asyn
 
   return (rows ?? []).map((r: any) => {
     const catSlug: string = r.scz_categories?.slug ?? "";
-    // Map our DB categories onto the legacy storefront enum
     const category =
       catSlug === "tenis" || catSlug === "sapatos"
         ? "tenis"
@@ -48,7 +54,7 @@ export const listPublicProducts = createServerFn({ method: "GET" }).handler(asyn
     const hasPromo = !!(promo && promo > 0 && promo < price);
 
     return {
-      id: r.slug, // storefront uses string IDs; slug is stable
+      id: r.slug,
       dbId: r.id,
       name: r.name,
       category,
