@@ -31,14 +31,15 @@ type SectionSlug = (typeof SECTIONS)[number]["slug"];
 const schema = z.object({
   name: z.string().min(1, "Informe o nome do produto"),
   slug: z.string().optional(),
-  section: z.enum(["tenis", "salto", "bolsa", "cinto", "acessorio"], {
-    required_error: "Escolha em qual aba o produto aparece",
+  section: z.enum(["tenis", "salto", "bolsa", "cinto", "acessorio"] as const, {
+    message: "Escolha em qual aba o produto aparece",
   }),
   sku: z.string().optional(),
   brand: z.string().optional(),
   short_description: z.string().optional(),
   description: z.string().optional(),
-  price_brl: z.number({ invalid_type_error: "Informe o preço" }).min(0),
+  price_brl: z.number({ message: "Informe o preço" }).min(0),
+
   cost_price: z.number().min(0).optional(),
   promo_price: z.number().min(0).optional(),
   weight_g: z.number().int().min(0).optional(),
