@@ -2,10 +2,14 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireAdmin } from "./admin-guard";
 
+const SECTION_SLUGS = ["tenis", "salto", "bolsa", "cinto", "acessorio"] as const;
+type SectionSlug = (typeof SECTION_SLUGS)[number];
+
 const productSchema = z.object({
   id: z.string().uuid().optional(),
-  name: z.string().min(1).max(200),
-  slug: z.string().min(1).max(200).regex(/^[a-z0-9-]+$/, "slug inválido"),
+  name: z.string().min(1, "Nome é obrigatório").max(200),
+  slug: z.string().max(200).regex(/^[a-z0-9-]*$/, "slug inválido").optional().nullable(),
+  section: z.enum(SECTION_SLUGS).optional().nullable(),
   sku: z.string().max(60).optional().nullable(),
   internal_code: z.string().max(60).optional().nullable(),
   brand: z.string().max(80).optional().nullable(),
@@ -34,6 +38,17 @@ const productSchema = z.object({
   tags: z.array(z.string().max(40)).max(20).optional().nullable(),
   images: z.array(z.string().url()).max(20).optional().nullable(),
 });
+
+function slugify(input: string): string {
+  return input
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 200);
+}
+
 
 export const listProducts = createServerFn({ method: "POST" })
   .middleware([requireAdmin])
@@ -79,11 +94,44 @@ export const upsertProduct = createServerFn({ method: "POST" })
     const payload: any = { ...data };
     const images = payload.images;
     delete payload.images;
+    const section: SectionSlug | null | undefined = payload.section;
+    delete payload.section;
+
+    // Resolve section -> category_id (overrides explicit category_id)
+    if (section) {
+      const { data: cat } = await supabase
+        .from("scz_categories")
+        .select("id")
+        .eq("slug", section)
+        .maybeSingle();
+      if (cat?.id) payload.category_id = cat.id;
+    }
+
+    // Auto-generate slug from name if blank, ensure uniqueness
+    if (!payload.slug || payload.slug.trim() === "") {
+      const base = slugify(payload.name) || `produto-${Date.now()}`;
+      let candidate = base;
+      let n = 1;
+      // try a few suffixes to avoid collision
+      while (true) {
+        const { data: clash } = await supabase
+          .from("scz_products")
+          .select("id")
+          .eq("slug", candidate)
+          .maybeSingle();
+        if (!clash || (data.id && clash.id === data.id)) break;
+        n += 1;
+        candidate = `${base}-${n}`;
+        if (n > 50) break;
+      }
+      payload.slug = candidate;
+    }
 
     const requestedStock = Number(payload.stock_qty ?? 0);
     let row: any;
     let stockDelta = 0;
     let movementType: "entrada" | "ajuste" | null = null;
+
 
     if (data.id) {
       // Read previous stock to compute delta
