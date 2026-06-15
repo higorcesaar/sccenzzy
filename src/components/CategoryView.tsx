@@ -138,11 +138,11 @@ export default function CategoryView({
                 onSelect={(prod) => {
                   setSelectedProduct(prod);
                   setIsDetailOpen(true);
-                }}
-                onOpenAIHelper={(prod) => {
-                  setSurveyProduct(prod);
-                  setIsAIHelperOpen(true);
-                }}
+
+                 
+  
+  
+
               />
             ))}
           </div>

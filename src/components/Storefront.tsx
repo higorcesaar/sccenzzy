@@ -259,7 +259,7 @@ export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidad
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
               {tenisList.map((item, index) => (
-                <ProductCard key={`${item.id}-${index}`} product={item} onAddToCart={handleAddToCart} onSelect={handleProductSelect} onOpenAIHelper={handleOpenAIHelper} />
+                <ProductCard key={`${item.id}-${index}`} product={item} onAddToCart={handleAddToCart} onSelect={handleProductSelect} />
               ))}
             </div>
           </section>
@@ -274,7 +274,7 @@ export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidad
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
               {saltosList.map((item, index) => (
-                <ProductCard key={`${item.id}-${index}`} product={item} onAddToCart={handleAddToCart} onSelect={handleProductSelect} onOpenAIHelper={handleOpenAIHelper} />
+                <ProductCard key={`${item.id}-${index}`} product={item} onAddToCart={handleAddToCart} onSelect={handleProductSelect} />
               ))}
             </div>
           </section>
@@ -291,7 +291,7 @@ export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidad
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
               {bolsasList.map((item, index) => (
-                <ProductCard key={`${item.id}-${index}`} product={item} onAddToCart={handleAddToCart} onSelect={handleProductSelect} onOpenAIHelper={handleOpenAIHelper} />
+                <ProductCard key={`${item.id}-${index}`} product={item} onAddToCart={handleAddToCart} onSelect={handleProductSelect} />
               ))}
             </div>
           </section>
@@ -306,7 +306,7 @@ export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidad
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
               {cintosList.map((item, index) => (
-                <ProductCard key={`${item.id}-${index}`} product={item} onAddToCart={handleAddToCart} onSelect={handleProductSelect} onOpenAIHelper={handleOpenAIHelper} />
+                <ProductCard key={`${item.id}-${index}`} product={item} onAddToCart={handleAddToCart} onSelect={handleProductSelect} />
               ))}
             </div>
           </section>
@@ -321,7 +321,7 @@ export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidad
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
               {acessoriosList.map((item, index) => (
-                <ProductCard key={`${item.id}-${index}`} product={item} onAddToCart={handleAddToCart} onSelect={handleProductSelect} onOpenAIHelper={handleOpenAIHelper} />
+                <ProductCard key={`${item.id}-${index}`} product={item} onAddToCart={handleAddToCart} onSelect={handleProductSelect} />
               ))}
             </div>
           </section>
@@ -412,7 +412,7 @@ export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidad
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {filteredProducts.filter(p => p.originalPrice).length > 0 ? (
               filteredProducts.filter(p => p.originalPrice).map((item, index) => (
-                <ProductCard key={`${item.id}-${index}-promo`} product={item} onAddToCart={handleAddToCart} onSelect={handleProductSelect} onOpenAIHelper={handleOpenAIHelper} />
+                <ProductCard key={`${item.id}-${index}-promo`} product={item} onAddToCart={handleAddToCart} onSelect={handleProductSelect} />
               ))
             ) : (
               <div className="col-span-full text-center py-20 text-stone-500 font-sans">
@@ -520,7 +520,7 @@ export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidad
         onClose={() => setIsDetailOpen(false)}
         product={selectedProduct}
         onAddToCart={handleAddToCart}
-        onOpenAIHelper={handleOpenAIHelper}
+       
       />
 
     </div>
