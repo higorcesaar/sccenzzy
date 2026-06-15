@@ -9,7 +9,6 @@ import CheckoutModal from './CheckoutModal';
 import CampaignBanner from './CampaignBanner';
 import BentoCampanha from './BentoCampanha';
 import StoreFinder from './StoreFinder';
-import AIHelperModal from './AIHelperModal';
 import ProductDetailModal from './ProductDetailModal';
 import { Product, CartItem } from '../types';
 import { listPublicProducts } from '../lib/storefront.functions';

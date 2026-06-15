@@ -7,7 +7,6 @@ import ProductCard from "./ProductCard";
 import CartDrawer from "./CartDrawer";
 import CheckoutModal from "./CheckoutModal";
 import ProductDetailModal from "./ProductDetailModal";
-import AIHelperModal from "./AIHelperModal";
 import { listPublicProducts } from "../lib/storefront.functions";
 import { Product, CartItem } from "../types";
 import { useToast } from "../hooks/useToast";
@@ -41,8 +40,6 @@ export default function CategoryView({
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [surveyProduct, setSurveyProduct] = useState<Product | null>(null);
-  const [isAIHelperOpen, setIsAIHelperOpen] = useState(false);
   const [activeCoupon, setActiveCoupon] = useState("");
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
@@ -138,11 +135,7 @@ export default function CategoryView({
                 onSelect={(prod) => {
                   setSelectedProduct(prod);
                   setIsDetailOpen(true);
-
-                 
-  
-  
-
+                }}
               />
             ))}
           </div>
@@ -171,17 +164,11 @@ export default function CategoryView({
         couponCode={activeCoupon}
       />
 
-      <AIHelperModal isOpen={isAIHelperOpen} onClose={() => setIsAIHelperOpen(false)} product={surveyProduct} />
-
       <ProductDetailModal
         isOpen={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
         product={selectedProduct}
         onAddToCart={handleAddToCart}
-        onOpenAIHelper={(p) => {
-          setSurveyProduct(p);
-          setIsAIHelperOpen(true);
-        }}
       />
     </div>
   );
