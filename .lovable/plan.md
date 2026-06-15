@@ -1,119 +1,49 @@
-# Reestruturação Completa do Painel Admin
+# Auditoria do Painel Admin × Vitrine
 
-Este é um trabalho grande (banco + backend + frontend). Vou dividir em **5 fases** sequenciais, cada uma entregue de forma testável.
+## Status atual (já implementado nas iterações anteriores)
 
-## Diagnóstico atual
+- Supabase como banco principal — OK (`scz_products`, `scz_categories`, `scz_collections`, `scz_product_variants`, `scz_stock_movements`).
+- Trigger `scz_apply_stock_movement` faz baixa automática (venda/saida/ajuste/entrada) por produto **e** por variação.
+- Admin tem CRUD completo de produtos, categorias (com subcategorias e `is_in_menu`), coleções, variações e estoque.
+- Upload de imagens via R2 (`getR2UploadUrl` + `scz_product_images`).
+- RLS: produtos/categorias/coleções/variações ativas legíveis pelo público; mutações exigem `requireAdmin`.
+- `storefront.functions.ts` lê tudo do Supabase com filtros por categoria, coleção, promo, lançamento.
 
-Problemas identificados no painel:
-- **Categorias engessadas**: hard-coded em 5 "Seções" (tenis/salto/bolsa/cinto/acessorio). Sem cadastro/edição/exclusão.
-- **Sem subcategorias** funcionais, sem ordenação, sem controle de menu.
-- **Variações ausentes**: estoque é um único número, sem grade por tamanho/cor/modelo.
-- **Storefront desconectado**: páginas `/sapatos`, `/bolsas`, `/cintos`, `/novidades`, `/promocao` usam dados estáticos ou filtros frágeis baseados em slug de categoria fixo.
-- **Sem duplicar produto**, sem ordenação, sem coleção.
-- **Sem coleção/roupas** — banco só suporta as 5 seções hardcoded.
-- **`promo_price` vs `price_cents`**: tipos inconsistentes (numeric vs cents).
-- **Estoque**: módulo existe mas sem variações; baixa por venda existe via trigger mas não há fluxo de pedido testado.
-- Permissões OK (RLS + `has_role`), mas várias páginas admin são "ComingSoon".
+## Lacunas reais encontradas
 
-## Fase 1 — Banco de dados (migration)
+1. **`src/components/Storefront.tsx`** ainda importa `PRODUCTS` de `src/data/catalog.ts` (hardcoded) e mistura com dados do banco. CartDrawer/CheckoutModal/StoreFinder também importam dali.
+2. **`src/components/Header.tsx`** tem menu hardcoded (`/sapatos`, `/bolsas`, `/cintos`, `/novidades`, `/promocao`). Categorias novas criadas no admin **não aparecem no menu**.
+3. **Rotas estáticas** `sapatos.tsx`, `bolsas.tsx`, `cintos.tsx` existem como arquivos fixos. Categorias novas no admin não geram página automática.
+4. **`ProductDetailModal`** e **CartDrawer** ainda usam o shape antigo do `catalog.ts` (não respeitam variações reais nem estoque por SKU).
 
-Reformular schema para suportar variações, categorias dinâmicas e coleções:
+## O que será feito nesta execução
 
-```text
-scz_categories
-  + sort_order, is_in_menu, image_url, description
-  + parent_id já existe → ativa subcategorias
+### A. Vitrine 100% dinâmica
+- Remover `PRODUCTS` de `Storefront.tsx`; render baseado **somente** em `listPublicProducts` (já existe).
+- Substituir uso de `PRODUCTS` em `CartDrawer`, `CheckoutModal`, `StoreFinder` por dados vindos do produto adicionado ao carrinho (que já carrega tudo).
+- Manter `src/data/catalog.ts` apenas com tipos auxiliares (ou removê-lo se não houver mais imports).
 
-scz_collections (NOVO)
-  id, name, slug, description, image_url, is_active, sort_order
+### B. Menu dinâmico no Header
+- Header consome `listPublicCategories()` (já existe) e renderiza apenas categorias com `is_in_menu = true`, ordenadas por `sort_order`.
+- Links apontam para `/c/{slug}` (rota dinâmica nova).
+- Mantém atalhos fixos: Novidades (`is_launch`) e Promoção (`is_on_sale`).
 
-scz_product_variants (NOVO)
-  id, product_id, sku, size, color, color_hex, model,
-  price_cents (override opcional), promo_price (override),
-  stock_qty, stock_min, barcode, sort_order
+### C. Rota dinâmica de categoria
+- Criar `src/routes/c.$slug.tsx` que chama `listPublicProducts({ categorySlug })`.
+- Criar `src/routes/colecao.$slug.tsx` para coleções.
+- Manter as rotas antigas (`sapatos`, `bolsas`, `cintos`) como redirects para `/c/<slug>` para não quebrar links existentes.
 
-scz_products
-  + collection_id (FK opcional)
-  + has_variants boolean
-  + remover obrigatoriedade de category_id (já é nullable)
+### D. Modal de detalhes com variações reais
+- `ProductDetailModal` lê `product.variants` (já vem de `listPublicProducts`). Mostra seletor de tamanho/cor real; bloqueia "adicionar" se variação sem estoque.
+- `CartDrawer` exibe variação selecionada (size/color) e usa `stockQty` para limitar quantidade.
 
-scz_stock_movements
-  + variant_id (nullable) → movimenta por variação quando aplicável
-```
+### E. Validação final
+- Smoke test via Playwright: criar categoria "Teste" com `is_in_menu`, criar produto nela, abrir home → categoria aparece no menu → `/c/teste` lista o produto → adicionar ao carrinho → variação aplicada.
 
-Triggers atualizados:
-- `scz_apply_stock_movement` passa a aplicar em `scz_product_variants` quando `variant_id` informado, senão em `scz_products`.
-- Garantir GRANTs (authenticated + service_role) em todas as novas tabelas; SELECT anônimo apenas em `scz_collections` e `scz_product_variants` (catálogo público).
+## Fora de escopo (já funciona ou nunca foi pedido)
+- Migração R2 (já está em uso para uploads).
+- Cloudflare DNS/SSL/cache (gerenciado pela Lovable na publicação).
+- Refatoração visual / redesign.
+- Checkout/pagamento real.
 
-## Fase 2 — Server functions (admin)
-
-Novos módulos em `src/lib/admin/`:
-- `categories.functions.ts`: list/create/update/delete/reorder, suporte a subcategoria, toggle de menu.
-- `collections.functions.ts`: CRUD de coleções.
-- `variants.functions.ts`: CRUD de variações por produto, ajuste de estoque por variação.
-- Reformar `products.functions.ts`:
-  - Remover enum hardcoded de SECTION_SLUGS — aceitar `category_id` livre.
-  - Aceitar `collection_id`, `sort_order`, `has_variants`, lista de variantes.
-  - `duplicateProduct(id)` (clona produto + imagens + variantes, novo slug).
-- Reformar `stock.functions.ts`:
-  - Aceitar `variant_id` opcional.
-  - Listar alertas por produto **e** por variação.
-- Atualizar `storefront.functions.ts` (público):
-  - `listPublicProducts({ categorySlug?, collectionSlug?, onlyOnSale?, onlyLaunch? })`
-  - Retornar variantes (tamanhos/cores disponíveis).
-  - `listPublicCategories()` para o menu.
-
-## Fase 3 — UI Admin
-
-Novas páginas:
-- `/admin/categorias` — árvore (categoria + subcategorias), drag-handle de ordenação, toggle "exibir no menu", upload de imagem.
-- `/admin/colecoes` — CRUD simples (lista + form).
-- `ProductForm` reescrito:
-  - Selector de categoria/subcategoria livre (combobox com search), **não** mais 5 abas fixas.
-  - Selector de coleção (opcional).
-  - Aba **Variações**: tabela editável (Tamanho × Cor × SKU × Estoque × Preço override). Botão "Gerar grade" a partir de listas de tamanhos e cores.
-  - Botão **Duplicar produto**.
-  - Campo `sort_order`.
-- `/admin/produtos` lista:
-  - Ações: ativar/desativar (inline), duplicar, excluir (já existe), reordenar.
-- `/admin/estoque` ampliado:
-  - Mostrar variações, filtro por produto/variação, motivo, exportar CSV.
-  - Alertas incluem variações abaixo do mínimo.
-
-## Fase 4 — Storefront (sincronização)
-
-- Substituir `src/data/catalog.ts` como fonte → `listPublicProducts` é único source-of-truth.
-- Cada rota (`/sapatos`, `/bolsas`, `/cintos`, `/novidades`, `/promocao`) consulta por `categorySlug` ou flags vindas do banco.
-- Header/menu usa `listPublicCategories({ inMenu: true, ordered: true })` em vez de links hardcoded.
-- `ProductDetailModal`: exibe seletor de tamanho/cor a partir de `scz_product_variants` quando `has_variants = true`; estoque mostrado por variação.
-- Invalidação automática: toda mutation admin invalida `["public-products"]` e `["public-categories"]`.
-
-## Fase 5 — Validação
-
-- Testes manuais via Playwright em modo headless:
-  1. Criar categoria + subcategoria → aparece no menu.
-  2. Criar coleção "Verão 2026".
-  3. Criar produto com 2 tamanhos × 2 cores → grade de 4 variantes salva.
-  4. Editar preço promocional → reflete na vitrine.
-  5. Reduzir estoque de uma variação → alerta aparece.
-  6. Duplicar produto → novo slug, mesma estrutura.
-  7. Desativar produto → some da vitrine.
-  8. Excluir categoria com produtos → bloqueia ou recategoriza.
-- Conferir `useServerFn` em todos os botões; toasts de sucesso/erro com mensagem clara.
-
-## Detalhes técnicos
-
-- **Compatibilidade retroativa**: produtos existentes ganham `has_variants = false` e continuam funcionando com `stock_qty` no produto.
-- **Slugs únicos** validados no servidor (categorias, coleções, produtos).
-- **Cascade**: deletar produto → deleta variants + images + movements (CASCADE no FK).
-- **Performance**: índices em `scz_product_variants(product_id)`, `scz_categories(parent_id, sort_order, is_in_menu)`.
-- **Segurança**: todas as server fns admin via `requireAdmin`; storefront via anon key com RLS `is_active = true`.
-
-## O que NÃO está no escopo
-
-- Cupons, frete, gateway de pagamento, multi-loja, multi-idioma, app mobile.
-- Migração de tema visual / redesign (mantém o look-and-feel atual).
-
----
-
-Posso começar pela **Fase 1 (migration do banco)** assim que você aprovar. As fases seguintes saem em sequência, cada uma testável antes de avançar.
+Posso seguir com A→E?
