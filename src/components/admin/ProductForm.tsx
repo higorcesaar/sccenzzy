@@ -77,7 +77,7 @@ export function ProductForm({ initial }: { initial?: any }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const save = useServerFn(upsertProduct);
-  const getUploadUrl = useServerFn(getR2UploadUrl);
+  const uploadMedia = useServerFn(uploadProductMedia);
   const fetchImages = useServerFn(getProductImages);
   const fetchCategories = useServerFn(listCategories);
   const fetchCollections = useServerFn(listCollectionsForSelect);
