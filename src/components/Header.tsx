@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingBag, Search, Instagram, Heart, Menu, X, ArrowRight, Sparkles, User as UserIcon, LogOut } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
+import { useServerFn } from '@tanstack/react-start';
+import { useQuery } from '@tanstack/react-query';
 import { Product } from '../types';
 import { useAuth } from '../hooks/useAuth';
+import { listPublicCategories } from '../lib/storefront.functions';
 
 interface HeaderProps {
   cartCount: number;
@@ -18,6 +21,13 @@ export default function Header({ cartCount, onCartClick, onSearch, products, onP
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<Product[]>([]);
+  const fetchCats = useServerFn(listPublicCategories);
+  const { data: dynamicCats = [] } = useQuery({
+    queryKey: ['public-categories'],
+    queryFn: () => fetchCats(),
+    staleTime: 60_000,
+  });
+  const menuCats = (dynamicCats as any[]).filter((c) => c.is_in_menu !== false && !c.parent_id);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const announcements = [
@@ -86,15 +96,16 @@ export default function Header({ cartCount, onCartClick, onSearch, products, onP
               <Link to="/novidades" className="text-xs uppercase tracking-widest font-semibold text-neutral-800 hover:text-gold-500 transition-colors">
                 Novidades
               </Link>
-              <Link to="/sapatos" className="text-xs uppercase tracking-widest font-semibold text-neutral-800 hover:text-gold-500 transition-colors">
-                Sapatos
-              </Link>
-              <Link to="/bolsas" className="text-xs uppercase tracking-widest font-semibold text-neutral-800 hover:text-gold-500 transition-colors">
-                Bolsas
-              </Link>
-              <Link to="/cintos" className="text-xs uppercase tracking-widest font-semibold text-neutral-800 hover:text-gold-500 transition-colors">
-                Cinto feminino
-              </Link>
+              {menuCats.map((c: any) => (
+                <Link
+                  key={c.id}
+                  to="/c/$slug"
+                  params={{ slug: c.slug }}
+                  className="text-xs uppercase tracking-widest font-semibold text-neutral-800 hover:text-gold-500 transition-colors"
+                >
+                  {c.name}
+                </Link>
+              ))}
               <Link to="/promocao" className="text-xs uppercase tracking-widest font-semibold text-neutral-800 hover:text-gold-500 transition-colors">
                 Promoção
               </Link>
@@ -288,30 +299,18 @@ export default function Header({ cartCount, onCartClick, onSearch, products, onP
                 <span>Novidades</span>
                 <ArrowRight className="h-4 w-4 text-stone-400" />
               </Link>
-              <Link
-                to="/sapatos"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="flex items-center justify-between text-sm uppercase tracking-widest font-semibold text-neutral-950 pb-2 border-b border-stone-50 hover:text-gold-500"
-              >
-                <span>Sapatos</span>
-                <ArrowRight className="h-4 w-4 text-stone-400" />
-              </Link>
-              <Link
-                to="/bolsas"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="flex items-center justify-between text-sm uppercase tracking-widest font-semibold text-neutral-950 pb-2 border-b border-stone-50 hover:text-gold-500"
-              >
-                <span>Bolsas</span>
-                <ArrowRight className="h-4 w-4 text-stone-400" />
-              </Link>
-              <Link
-                to="/cintos"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="flex items-center justify-between text-sm uppercase tracking-widest font-semibold text-neutral-950 pb-2 border-b border-stone-50 hover:text-gold-500"
-              >
-                <span>Cinto feminino</span>
-                <ArrowRight className="h-4 w-4 text-stone-400" />
-              </Link>
+              {menuCats.map((c: any) => (
+                <Link
+                  key={c.id}
+                  to="/c/$slug"
+                  params={{ slug: c.slug }}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center justify-between text-sm uppercase tracking-widest font-semibold text-neutral-950 pb-2 border-b border-stone-50 hover:text-gold-500"
+                >
+                  <span>{c.name}</span>
+                  <ArrowRight className="h-4 w-4 text-stone-400" />
+                </Link>
+              ))}
               <Link
                 to="/promocao"
                 onClick={() => setIsMobileMenuOpen(false)}

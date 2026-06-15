@@ -12,7 +12,6 @@ import StoreFinder from './StoreFinder';
 import AIHelperModal from './AIHelperModal';
 import ProductDetailModal from './ProductDetailModal';
 import { Product, CartItem } from '../types';
-import { PRODUCTS } from '../data/catalog';
 import { listPublicProducts } from '../lib/storefront.functions';
 import { Sparkles, ArrowRight, Instagram, Mail, ShieldCheck, Heart, Star, Award, AwardIcon, Compass, Anchor, Check } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
@@ -124,29 +123,14 @@ export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidad
     setIsCheckoutOpen(true);
   };
 
-  // Live catalog from Supabase — merged with hardcoded fallback (hardcoded fills any
-  // gaps for products that exist in DB but haven't been given images yet, by slug match).
+  // Live catalog from Supabase — 100% dinâmico.
   const fetchPublic = useServerFn(listPublicProducts);
-  const { data: dbProducts } = useQuery({
-    queryKey: ['public-products'],
+  const { data: dbProducts = [] } = useQuery({
+    queryKey: ['public-products', 'home'],
     queryFn: () => fetchPublic(),
     staleTime: 30_000,
   });
-
-  const mergedCatalog: Product[] = (() => {
-    if (!dbProducts || dbProducts.length === 0) return PRODUCTS;
-    const fallbackBySlug = new Map(PRODUCTS.map((p) => [p.id, p]));
-    return dbProducts.map((p: any) => {
-      const fb = fallbackBySlug.get(p.id);
-      return {
-        ...(fb ?? {}),
-        ...p,
-        images: p.images && p.images.length > 0 ? p.images : fb?.images ?? [],
-        features: fb?.features ?? p.features ?? [],
-        sizes: fb?.sizes ?? p.sizes,
-      } as Product;
-    });
-  })();
+  const mergedCatalog: Product[] = (dbProducts as Product[]) ?? [];
 
   const filteredProducts = mergedCatalog.filter(p => {
     if (!searchTerm) return true;
