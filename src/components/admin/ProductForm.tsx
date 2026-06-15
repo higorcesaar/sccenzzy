@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -23,7 +23,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Upload, X, Save, Copy, Plus, Trash2 } from "lucide-react";
+import { Loader2, Upload, X, Save, Copy, Plus, Trash2, ArrowUp, ArrowDown, Star } from "lucide-react";
 
 const schema = z.object({
   name: z.string().min(1, "Informe o nome do produto"),
@@ -103,49 +103,44 @@ export function ProductForm({ initial }: { initial?: any }) {
   const [images, setImages] = useState<string[]>([]);
   const [variants, setVariants] = useState<Variant[]>([]);
   const [uploading, setUploading] = useState(false);
+  const imagesHydrated = useRef(false);
+  const variantsHydrated = useRef(false);
+
+  // Hidrata as imagens existentes uma única vez quando chegam do servidor.
+  // Antes, se o usuário fizesse upload antes da carga terminar, as imagens
+  // existentes eram perdidas porque o useEffect só sincronizava enquanto o
+  // state estivesse vazio.
+  useEffect(() => {
+    if (!imagesHydrated.current && existingImages) {
+      setImages(existingImages.map((i: any) => i.url));
+      imagesHydrated.current = true;
+    }
+  }, [existingImages]);
 
   useEffect(() => {
-    if (existingImages && images.length === 0) setImages(existingImages.map((i: any) => i.url));
-  }, [existingImages]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!variantsHydrated.current && existingVariants) {
+      setVariants(existingVariants as any);
+      variantsHydrated.current = true;
+    }
+  }, [existingVariants]);
 
-  useEffect(() => {
-    if (existingVariants && variants.length === 0) setVariants(existingVariants as any);
-  }, [existingVariants]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Fonte única de verdade: o array `images`. Antes de hidratar mostramos o
+  // que já veio do servidor para o usuário não ver tela vazia.
+  const imgs = imagesHydrated.current ? images : (existingImages?.map((i: any) => i.url) ?? images);
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: {
-      name: initial?.name ?? "",
-      slug: initial?.slug ?? "",
-      category_id: initial?.category_id ?? undefined,
-      collection_id: initial?.collection_id ?? undefined,
-      sku: initial?.sku ?? "",
-      brand: initial?.brand ?? "",
-      short_description: initial?.short_description ?? "",
-      description: initial?.description ?? "",
-      price_brl: initial ? Number(initial.price_cents) / 100 : 0,
-      cost_price: initial?.cost_price ? Number(initial.cost_price) : undefined,
-      promo_price: initial?.promo_price ? Number(initial.promo_price) : undefined,
-      weight_g: initial?.weight_g ?? undefined,
-      width_cm: initial?.width_cm ?? undefined,
-      height_cm: initial?.height_cm ?? undefined,
-      depth_cm: initial?.depth_cm ?? undefined,
-      stock_qty: initial?.stock_qty ?? 0,
-      stock_min: initial?.stock_min ?? 0,
-      sort_order: initial?.sort_order ?? 0,
-      seo_title: initial?.seo_title ?? "",
-      seo_description: initial?.seo_description ?? "",
-      seo_keywords: initial?.seo_keywords ?? "",
-      is_active: initial?.is_active ?? true,
-      is_featured: initial?.is_featured ?? false,
-      is_launch: initial?.is_launch ?? false,
-      is_on_sale: initial?.is_on_sale ?? false,
-      is_bestseller: initial?.is_bestseller ?? false,
-      has_variants: initial?.has_variants ?? false,
-    },
-  });
+  function moveImage(from: number, to: number) {
+    if (to < 0 || to >= imgs.length) return;
+    const next = [...imgs];
+    const [item] = next.splice(from, 1);
+    next.splice(to, 0, item);
+    imagesHydrated.current = true;
+    setImages(next);
+  }
 
-  const imgs = images.length > 0 ? images : existingImages?.map((i: any) => i.url) ?? [];
+  function removeImage(i: number) {
+    imagesHydrated.current = true;
+    setImages(imgs.filter((_: string, j: number) => j !== i));
+  }
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -159,8 +154,9 @@ export function ProductForm({ initial }: { initial?: any }) {
         if (!put.ok) throw new Error(`Falha no upload (${put.status})`);
         next.push(p.publicUrl);
       }
+      imagesHydrated.current = true;
       setImages(next);
-      toast.success(`${files.length} arquivo(s) enviado(s)`);
+      toast.success(`${files.length} arquivo(s) enviado(s). Lembre de salvar.`);
     } catch (err: any) {
       toast.error(err?.message || "Erro no upload");
     } finally {
