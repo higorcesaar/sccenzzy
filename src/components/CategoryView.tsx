@@ -81,17 +81,12 @@ export default function CategoryView({
   const subtotal = cart.reduce((acc, i) => acc + i.product.price * i.quantity, 0);
 
   const handleTriggerCheckout = (coupon: string, discount: number) => {
-    if (!user) {
-      addToast("Faça login para finalizar a compra.", "info", "Autenticação");
-      setIsCartOpen(false);
-      navigate({ to: "/login" });
-      return;
-    }
     setActiveCoupon(coupon);
     setCouponDiscount(discount);
     setIsCartOpen(false);
     setIsCheckoutOpen(true);
   };
+
 
   return (
     <div className="bg-[#FAF9F6] min-h-screen text-neutral-900">
