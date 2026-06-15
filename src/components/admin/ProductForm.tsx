@@ -165,6 +165,39 @@ export function ProductForm({ initial }: { initial?: any }) {
     }
   }
 
+  const form = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      name: initial?.name ?? "",
+      slug: initial?.slug ?? "",
+      category_id: initial?.category_id ?? undefined,
+      collection_id: initial?.collection_id ?? undefined,
+      sku: initial?.sku ?? "",
+      brand: initial?.brand ?? "",
+      short_description: initial?.short_description ?? "",
+      description: initial?.description ?? "",
+      price_brl: initial ? Number(initial.price_cents) / 100 : 0,
+      cost_price: initial?.cost_price ? Number(initial.cost_price) : undefined,
+      promo_price: initial?.promo_price ? Number(initial.promo_price) : undefined,
+      weight_g: initial?.weight_g ?? undefined,
+      width_cm: initial?.width_cm ?? undefined,
+      height_cm: initial?.height_cm ?? undefined,
+      depth_cm: initial?.depth_cm ?? undefined,
+      stock_qty: initial?.stock_qty ?? 0,
+      stock_min: initial?.stock_min ?? 0,
+      sort_order: initial?.sort_order ?? 0,
+      seo_title: initial?.seo_title ?? "",
+      seo_description: initial?.seo_description ?? "",
+      seo_keywords: initial?.seo_keywords ?? "",
+      is_active: initial?.is_active ?? true,
+      is_featured: initial?.is_featured ?? false,
+      is_launch: initial?.is_launch ?? false,
+      is_on_sale: initial?.is_on_sale ?? false,
+      is_bestseller: initial?.is_bestseller ?? false,
+      has_variants: initial?.has_variants ?? false,
+    },
+  });
+
   const mut = useMutation({
     mutationFn: async (v: FormValues) => {
       const payload: any = {
