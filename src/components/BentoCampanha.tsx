@@ -9,7 +9,11 @@ interface BentoCampanhaProps {
 }
 
 export default function BentoCampanha({ products, onSelect }: BentoCampanhaProps) {
-  const highlightScents = products.filter(p => p.id === 'sc-01' || p.id === 'sc-05');
+  const featured = products.filter(p => p.images && p.images.length > 0);
+  const primary = featured[0];
+  const secondary = featured[1] || featured[0];
+  if (!primary) return null;
+  const fallback = "https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?auto=format&fit=crop&q=80&w=500";
 
   return (
     <section className="py-20 bg-stone-100 text-stone-900 px-4 sm:px-6 lg:px-8 relative border-t border-stone-200" id="campaign-bento">
@@ -29,13 +33,13 @@ export default function BentoCampanha({ products, onSelect }: BentoCampanhaProps
           
           {/* Card 1: Highlight Shoe */}
           <div
-            onClick={() => onSelect(products[0])}
+            onClick={() => onSelect(primary)}
             className="group cursor-pointer bg-white border border-stone-200 rounded-3xl overflow-hidden shadow-lg transition-all duration-300 hover:border-gold-300 hover:shadow-xl flex flex-col justify-between"
           >
             <div className="relative aspect-[3/4] bg-stone-100 overflow-hidden">
               <img
-                src={products[0].images[0]}
-                alt={products[0].name}
+                src={primary.images[0] || fallback}
+                alt={primary.name}
                 className="w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500"
                 referrerPolicy="no-referrer"
               />
@@ -43,7 +47,7 @@ export default function BentoCampanha({ products, onSelect }: BentoCampanhaProps
               
               <div className="absolute bottom-6 left-6 right-6 text-white">
                 <span className="text-[9px] uppercase tracking-widest text-gold-400 font-bold block mb-1">Peça Chave</span>
-                <h3 className="font-serif text-xl font-bold leading-tight mb-2 uppercase">{products[0].name}</h3>
+                <h3 className="font-serif text-xl font-bold leading-tight mb-2 uppercase">{primary.name}</h3>
                 <p className="text-xs text-stone-200 leading-normal line-clamp-2">
                   Elegância atemporal. O clássico indispensável para montar looks incrivéis tanto no dia quanto à noite.
                 </p>
@@ -54,20 +58,20 @@ export default function BentoCampanha({ products, onSelect }: BentoCampanhaProps
                 Ver detalhes <ArrowRight className="h-4 w-4" />
               </span>
               <span className="font-mono text-sm font-bold text-neutral-900">
-                {products[0].price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                {primary.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
               </span>
             </div>
           </div>
 
           {/* Card 3: Highlight Bag */}
           <div
-            onClick={() => onSelect(products[1] || products[4])}
+            onClick={() => onSelect(secondary)}
             className="group cursor-pointer bg-white border border-stone-200 rounded-3xl overflow-hidden shadow-lg transition-all duration-300 hover:border-gold-300 hover:shadow-xl flex flex-col justify-between"
           >
             <div className="relative aspect-[3/4] bg-stone-100 overflow-hidden">
               <img
-                src={(products[1] || products[4]).images[0]}
-                alt="Saffiano Gold Bag"
+                src={secondary.images[0] || fallback}
+                alt={secondary.name}
                 className="w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500"
                 referrerPolicy="no-referrer"
               />
@@ -75,7 +79,7 @@ export default function BentoCampanha({ products, onSelect }: BentoCampanhaProps
               
               <div className="absolute bottom-6 left-6 right-6 text-white">
                 <span className="text-[9px] uppercase tracking-widest text-gold-400 font-bold block mb-1">Acessório da Estação</span>
-                <h3 className="font-serif text-xl font-bold leading-tight mb-2 uppercase">{(products[1] || products[4]).name}</h3>
+                <h3 className="font-serif text-xl font-bold leading-tight mb-2 uppercase">{secondary.name}</h3>
                 <p className="text-xs text-stone-200 leading-normal line-clamp-2">
                   Acabamento premium estruturado combinado com detalhes metálicos sofisticados.
                 </p>
@@ -86,7 +90,7 @@ export default function BentoCampanha({ products, onSelect }: BentoCampanhaProps
                 Ver detalhes <ArrowRight className="h-4 w-4" />
               </span>
               <span className="font-mono text-sm font-bold text-neutral-900">
-                {(products[1] || products[4]).price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                {secondary.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
               </span>
             </div>
           </div>
