@@ -26,7 +26,9 @@ import { Route as AdminProdutosIndexRouteImport } from './routes/admin.produtos.
 import { Route as AdminPedidosIndexRouteImport } from './routes/admin.pedidos.index'
 import { Route as AdminPaginasIndexRouteImport } from './routes/admin.paginas.index'
 import { Route as AdminConfiguracoesIndexRouteImport } from './routes/admin.configuracoes.index'
+import { Route as AdminColecoesIndexRouteImport } from './routes/admin.colecoes.index'
 import { Route as AdminClientesIndexRouteImport } from './routes/admin.clientes.index'
+import { Route as AdminCategoriasIndexRouteImport } from './routes/admin.categorias.index'
 import { Route as AdminBannersIndexRouteImport } from './routes/admin.banners.index'
 import { Route as AdminProdutosNovoRouteImport } from './routes/admin.produtos.novo'
 import { Route as AdminProdutosIdRouteImport } from './routes/admin.produtos.$id'
@@ -119,9 +121,19 @@ const AdminConfiguracoesIndexRoute = AdminConfiguracoesIndexRouteImport.update({
   path: '/configuracoes/',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminColecoesIndexRoute = AdminColecoesIndexRouteImport.update({
+  id: '/colecoes/',
+  path: '/colecoes/',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminClientesIndexRoute = AdminClientesIndexRouteImport.update({
   id: '/clientes/',
   path: '/clientes/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCategoriasIndexRoute = AdminCategoriasIndexRouteImport.update({
+  id: '/categorias/',
+  path: '/categorias/',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminBannersIndexRoute = AdminBannersIndexRouteImport.update({
@@ -175,7 +187,9 @@ export interface FileRoutesByFullPath {
   '/admin/produtos/$id': typeof AdminProdutosIdRoute
   '/admin/produtos/novo': typeof AdminProdutosNovoRoute
   '/admin/banners/': typeof AdminBannersIndexRoute
+  '/admin/categorias/': typeof AdminCategoriasIndexRoute
   '/admin/clientes/': typeof AdminClientesIndexRoute
+  '/admin/colecoes/': typeof AdminColecoesIndexRoute
   '/admin/configuracoes/': typeof AdminConfiguracoesIndexRoute
   '/admin/paginas/': typeof AdminPaginasIndexRoute
   '/admin/pedidos/': typeof AdminPedidosIndexRoute
@@ -200,7 +214,9 @@ export interface FileRoutesByTo {
   '/admin/produtos/$id': typeof AdminProdutosIdRoute
   '/admin/produtos/novo': typeof AdminProdutosNovoRoute
   '/admin/banners': typeof AdminBannersIndexRoute
+  '/admin/categorias': typeof AdminCategoriasIndexRoute
   '/admin/clientes': typeof AdminClientesIndexRoute
+  '/admin/colecoes': typeof AdminColecoesIndexRoute
   '/admin/configuracoes': typeof AdminConfiguracoesIndexRoute
   '/admin/paginas': typeof AdminPaginasIndexRoute
   '/admin/pedidos': typeof AdminPedidosIndexRoute
@@ -227,7 +243,9 @@ export interface FileRoutesById {
   '/admin/produtos/$id': typeof AdminProdutosIdRoute
   '/admin/produtos/novo': typeof AdminProdutosNovoRoute
   '/admin/banners/': typeof AdminBannersIndexRoute
+  '/admin/categorias/': typeof AdminCategoriasIndexRoute
   '/admin/clientes/': typeof AdminClientesIndexRoute
+  '/admin/colecoes/': typeof AdminColecoesIndexRoute
   '/admin/configuracoes/': typeof AdminConfiguracoesIndexRoute
   '/admin/paginas/': typeof AdminPaginasIndexRoute
   '/admin/pedidos/': typeof AdminPedidosIndexRoute
@@ -255,7 +273,9 @@ export interface FileRouteTypes {
     | '/admin/produtos/$id'
     | '/admin/produtos/novo'
     | '/admin/banners/'
+    | '/admin/categorias/'
     | '/admin/clientes/'
+    | '/admin/colecoes/'
     | '/admin/configuracoes/'
     | '/admin/paginas/'
     | '/admin/pedidos/'
@@ -280,7 +300,9 @@ export interface FileRouteTypes {
     | '/admin/produtos/$id'
     | '/admin/produtos/novo'
     | '/admin/banners'
+    | '/admin/categorias'
     | '/admin/clientes'
+    | '/admin/colecoes'
     | '/admin/configuracoes'
     | '/admin/paginas'
     | '/admin/pedidos'
@@ -306,7 +328,9 @@ export interface FileRouteTypes {
     | '/admin/produtos/$id'
     | '/admin/produtos/novo'
     | '/admin/banners/'
+    | '/admin/categorias/'
     | '/admin/clientes/'
+    | '/admin/colecoes/'
     | '/admin/configuracoes/'
     | '/admin/paginas/'
     | '/admin/pedidos/'
@@ -447,11 +471,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminConfiguracoesIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/colecoes/': {
+      id: '/admin/colecoes/'
+      path: '/colecoes'
+      fullPath: '/admin/colecoes/'
+      preLoaderRoute: typeof AdminColecoesIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/clientes/': {
       id: '/admin/clientes/'
       path: '/clientes'
       fullPath: '/admin/clientes/'
       preLoaderRoute: typeof AdminClientesIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/categorias/': {
+      id: '/admin/categorias/'
+      path: '/categorias'
+      fullPath: '/admin/categorias/'
+      preLoaderRoute: typeof AdminCategoriasIndexRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/banners/': {
@@ -509,7 +547,9 @@ interface AdminRouteChildren {
   AdminProdutosIdRoute: typeof AdminProdutosIdRoute
   AdminProdutosNovoRoute: typeof AdminProdutosNovoRoute
   AdminBannersIndexRoute: typeof AdminBannersIndexRoute
+  AdminCategoriasIndexRoute: typeof AdminCategoriasIndexRoute
   AdminClientesIndexRoute: typeof AdminClientesIndexRoute
+  AdminColecoesIndexRoute: typeof AdminColecoesIndexRoute
   AdminConfiguracoesIndexRoute: typeof AdminConfiguracoesIndexRoute
   AdminPaginasIndexRoute: typeof AdminPaginasIndexRoute
   AdminPedidosIndexRoute: typeof AdminPedidosIndexRoute
@@ -526,7 +566,9 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminProdutosIdRoute: AdminProdutosIdRoute,
   AdminProdutosNovoRoute: AdminProdutosNovoRoute,
   AdminBannersIndexRoute: AdminBannersIndexRoute,
+  AdminCategoriasIndexRoute: AdminCategoriasIndexRoute,
   AdminClientesIndexRoute: AdminClientesIndexRoute,
+  AdminColecoesIndexRoute: AdminColecoesIndexRoute,
   AdminConfiguracoesIndexRoute: AdminConfiguracoesIndexRoute,
   AdminPaginasIndexRoute: AdminPaginasIndexRoute,
   AdminPedidosIndexRoute: AdminPedidosIndexRoute,

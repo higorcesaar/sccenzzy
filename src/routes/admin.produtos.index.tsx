@@ -2,10 +2,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { listProducts, deleteProduct } from "@/lib/admin/products.functions";
+import { listProducts, deleteProduct, toggleProductActive, duplicateProduct } from "@/lib/admin/products.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -14,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, Plus, Search, Trash2, Pencil } from "lucide-react";
+import { Loader2, Plus, Search, Trash2, Pencil, Copy } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/produtos/")({
@@ -29,6 +30,8 @@ function ProductsListPage() {
   const [page, setPage] = useState(1);
   const fetchList = useServerFn(listProducts);
   const del = useServerFn(deleteProduct);
+  const toggle = useServerFn(toggleProductActive);
+  const dup = useServerFn(duplicateProduct);
   const qc = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -41,8 +44,25 @@ function ProductsListPage() {
     onSuccess: () => {
       toast.success("Produto excluído");
       qc.invalidateQueries({ queryKey: ["admin", "products"] });
+      qc.invalidateQueries({ queryKey: ["public-products"] });
     },
     onError: (e: any) => toast.error(e?.message || "Erro ao excluir"),
+  });
+  const toggleMut = useMutation({
+    mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) => toggle({ data: { id, is_active } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "products"] });
+      qc.invalidateQueries({ queryKey: ["public-products"] });
+    },
+    onError: (e: any) => toast.error(e?.message || "Erro"),
+  });
+  const dupMut = useMutation({
+    mutationFn: (id: string) => dup({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Produto duplicado");
+      qc.invalidateQueries({ queryKey: ["admin", "products"] });
+    },
+    onError: (e: any) => toast.error(e?.message || "Erro"),
   });
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
@@ -130,14 +150,14 @@ function ProductsListPage() {
                     </span>
                   </TableCell>
                   <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {p.is_active ? (
-                        <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">Ativo</Badge>
-                      ) : (
-                        <Badge variant="secondary">Inativo</Badge>
-                      )}
+                    <div className="flex flex-wrap items-center gap-1">
+                      <Switch
+                        checked={!!p.is_active}
+                        onCheckedChange={(v) => toggleMut.mutate({ id: p.id, is_active: v })}
+                      />
                       {p.is_featured && <Badge variant="outline">Destaque</Badge>}
                       {p.is_on_sale && <Badge className="bg-rose-100 text-rose-700 hover:bg-rose-100">Promo</Badge>}
+                      {p.has_variants && <Badge variant="outline">Variações</Badge>}
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
@@ -147,12 +167,13 @@ function ProductsListPage() {
                           <Pencil className="h-4 w-4" />
                         </Link>
                       </Button>
+                      <Button size="sm" variant="ghost" onClick={() => dupMut.mutate(p.id)} title="Duplicar">
+                        <Copy className="h-4 w-4" />
+                      </Button>
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => {
-                          if (confirm(`Excluir "${p.name}"?`)) delMut.mutate(p.id);
-                        }}
+                        onClick={() => { if (confirm(`Excluir "${p.name}"?`)) delMut.mutate(p.id); }}
                       >
                         <Trash2 className="h-4 w-4 text-rose-600" />
                       </Button>
