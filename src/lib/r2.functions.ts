@@ -123,4 +123,6 @@ export const uploadProductMedia = createServerFn({ method: "POST" })
     // R2 não estiver com domínio público configurado.
     const publicUrl = `/api/public/r2/${key}`;
     return { publicUrl, key };
+  });
+
 
