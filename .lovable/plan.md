@@ -1,116 +1,119 @@
-## Scenzzy Admin — Plano de evolução para CMS completo
+# Reestruturação Completa do Painel Admin
 
-Vamos transformar o `/admin/editor` num **painel administrativo full-stack** inspirado em Hostinger Builder + Shopify + Loja Integrada, mantendo a estética premium Arezzo do storefront atual.
+Este é um trabalho grande (banco + backend + frontend). Vou dividir em **5 fases** sequenciais, cada uma entregue de forma testável.
 
-A execução será **faseada** (cada fase entrega valor sozinha e é aprovada antes da próxima), porque entregar tudo em uma única migração+PR seria arriscado e impossível de revisar.
+## Diagnóstico atual
 
----
+Problemas identificados no painel:
+- **Categorias engessadas**: hard-coded em 5 "Seções" (tenis/salto/bolsa/cinto/acessorio). Sem cadastro/edição/exclusão.
+- **Sem subcategorias** funcionais, sem ordenação, sem controle de menu.
+- **Variações ausentes**: estoque é um único número, sem grade por tamanho/cor/modelo.
+- **Storefront desconectado**: páginas `/sapatos`, `/bolsas`, `/cintos`, `/novidades`, `/promocao` usam dados estáticos ou filtros frágeis baseados em slug de categoria fixo.
+- **Sem duplicar produto**, sem ordenação, sem coleção.
+- **Sem coleção/roupas** — banco só suporta as 5 seções hardcoded.
+- **`promo_price` vs `price_cents`**: tipos inconsistentes (numeric vs cents).
+- **Estoque**: módulo existe mas sem variações; baixa por venda existe via trigger mas não há fluxo de pedido testado.
+- Permissões OK (RLS + `has_role`), mas várias páginas admin são "ComingSoon".
 
-### Arquitetura geral
+## Fase 1 — Banco de dados (migration)
 
-- **Banco**: Supabase (Postgres + RLS). Hoje já existem `scz_products`, `scz_categories`, `scz_product_images`, `scz_orders`, `scz_order_items`, `scz_addresses`, `user_roles`, `profiles`. Vamos **estender** essas tabelas em vez de recriar.
-- **Mídia**: Cloudflare R2 (bucket `scenzzy`) via server function presignada já existente (`getR2UploadUrl`). Toda imagem/vídeo novo passa por ali.
-- **Server logic**: `createServerFn` do TanStack Start (sem Edge Functions). RLS por `has_role(auth.uid(),'admin')`.
-- **Layout admin**: novo grupo de rotas `/_authenticated/admin/*` com `SidebarProvider` shadcn, header sticky, breadcrumbs, dark/light. Storefront público **não muda visualmente** nesta entrega.
-- **Estado/Data**: TanStack Query (loaders + `useSuspenseQuery`), forms com `react-hook-form` + `zod`, tabelas com `@tanstack/react-table`, drag-and-drop com `@dnd-kit`, gráficos com `recharts`.
-
----
-
-### Fases (cada uma é um PR/aprovação separado)
-
-**Fase 1 — Fundação do painel (esta entrega)**
-1. Migração SQL única que:
-   - Estende `scz_products` com: `sku`, `internal_code`, `brand`, `subcategory_id`, `short_description`, `cost_price`, `promo_price`, `weight_g`, `width_cm`, `height_cm`, `depth_cm`, `seo_title`, `seo_description`, `seo_keywords`, `og_image`, `is_active`, `is_featured`, `is_launch`, `is_on_sale`, `is_bestseller`, `stock_qty`, `stock_min`, `stock_reserved`, `stock_sold`.
-   - Cria `scz_stock_movements` (entrada/saída/ajuste, com motivo e user_id).
-   - Cria `scz_pages` (slug, title, seo_*, status draft/published, blocks jsonb).
-   - Cria `scz_page_builder_blocks` (page_id, type, position, props jsonb) — opcional; pode viver dentro de `scz_pages.blocks` jsonb pra simplificar v1.
-   - Cria `scz_banners` (location, image_url, link, title, subtitle, position, active, starts_at, ends_at).
-   - Cria `scz_settings` (key/value jsonb) — config global da loja.
-   - Cria `scz_customers` view sobre `auth.users` + `profiles` + agregados de pedidos.
-   - GRANTs corretos + RLS: leitura pública só do que é público (produtos ativos, páginas publicadas, banners ativos); escrita só `admin`.
-   - Trigger `scz_stock_apply_movement` que ajusta `stock_qty` automaticamente.
-2. Layout `/admin` com sidebar (Dashboard, Produtos, Estoque, Pedidos, Páginas, Banners, Construtor, Clientes, Configurações, SEO).
-3. **Dashboard** funcional (vendas dia/mês, ticket médio, pedidos abertos, estoque baixo, novos clientes, gráfico de vendas 30d).
-4. **CRUD Produtos** completo (lista com filtros/busca/paginação server-side, formulário com todas as abas: Geral, Mídia, Preço, Estoque, SEO, Flags). Upload de imagens/vídeos pro R2.
-5. **Estoque**: tela de movimentações + alertas + ajuste manual.
-
-**Fase 2 — Pedidos & Clientes**
-- Painel de pedidos com pipeline de status (Kanban opcional), detalhe do pedido, histórico, atualização de status, geração de etiqueta placeholder.
-- Lista de clientes com LTV, último pedido, endereços.
-
-**Fase 3 — CMS de Páginas + SEO global**
-- CRUD de páginas (Home, Sobre, Contato, Políticas, + custom).
-- Editor de SEO por página/produto/categoria.
-- Renderização pública das páginas em `/p/$slug`.
-
-**Fase 4 — Construtor visual drag-and-drop**
-- `@dnd-kit` com paleta de blocos (Hero, Banner, Carrossel, Produtos, Coleções, Vídeo, Galeria, FAQ, Depoimentos, Newsletter, Rodapé).
-- Cada bloco = componente React + schema zod de props + painel lateral de edição (texto inline, color picker, spacing, font).
-- Preview ao vivo (iframe) com viewport desktop/tablet/mobile.
-- Persistência em `scz_pages.blocks` (jsonb versionado: draft vs published).
-- Home passa a ser renderizada a partir desse jsonb (com fallback pro layout atual se vazio).
-
-**Fase 5 — Banners, Campanhas, Configurações da loja**
-- Gerenciamento de banners por localização (home-hero, home-mid, categoria-x).
-- Configurações: dados da loja, redes sociais, frete, métodos de pagamento toggles.
-
----
-
-### Detalhes técnicos relevantes
+Reformular schema para suportar variações, categorias dinâmicas e coleções:
 
 ```text
-src/routes/_authenticated/admin/
-  route.tsx            ← layout com Sidebar (gate de role=admin no beforeLoad client-side)
-  index.tsx            ← Dashboard
-  produtos/
-    index.tsx          ← lista
-    novo.tsx
-    $id.tsx            ← editor (tabs)
-  estoque/index.tsx
-  pedidos/
-    index.tsx
-    $id.tsx
-  paginas/
-    index.tsx
-    $id.tsx            ← construtor visual (fase 4)
-  banners/index.tsx
-  clientes/index.tsx
-  seo/index.tsx
-  configuracoes/index.tsx
+scz_categories
+  + sort_order, is_in_menu, image_url, description
+  + parent_id já existe → ativa subcategorias
 
-src/lib/admin/
-  products.functions.ts
-  stock.functions.ts
-  orders.functions.ts
-  pages.functions.ts
-  banners.functions.ts
-  dashboard.functions.ts
-  customers.functions.ts
-  settings.functions.ts
+scz_collections (NOVO)
+  id, name, slug, description, image_url, is_active, sort_order
+
+scz_product_variants (NOVO)
+  id, product_id, sku, size, color, color_hex, model,
+  price_cents (override opcional), promo_price (override),
+  stock_qty, stock_min, barcode, sort_order
+
+scz_products
+  + collection_id (FK opcional)
+  + has_variants boolean
+  + remover obrigatoriedade de category_id (já é nullable)
+
+scz_stock_movements
+  + variant_id (nullable) → movimenta por variação quando aplicável
 ```
 
-- Todas as server fns usam `requireSupabaseAuth` + checagem `has_role(userId,'admin')`.
-- Lista de produtos: paginação server-side + busca full-text (`ilike` em nome/sku) — escalável pra milhares.
-- `react-hook-form` + `zodResolver` em todos os forms.
-- `sonner` (já presente) para toasts.
-- Storefront público segue lendo de `src/data/catalog.ts` por enquanto; em paralelo adicionamos um server fn `listPublicProducts()` que lê do Supabase, e na Fase 3/4 trocamos o storefront pra consumir do banco (mantendo fallback).
+Triggers atualizados:
+- `scz_apply_stock_movement` passa a aplicar em `scz_product_variants` quando `variant_id` informado, senão em `scz_products`.
+- Garantir GRANTs (authenticated + service_role) em todas as novas tabelas; SELECT anônimo apenas em `scz_collections` e `scz_product_variants` (catálogo público).
 
-### Pacotes a adicionar
-`@dnd-kit/core @dnd-kit/sortable @tanstack/react-table react-hook-form @hookform/resolvers zod recharts` (zod e react-hook-form podem já estar).
+## Fase 2 — Server functions (admin)
 
-### Segurança
-- Todas as tabelas novas: RLS ON, policies `admin` para escrita; leitura pública apenas onde faz sentido (banners ativos, páginas publicadas, produtos ativos).
-- Service role nunca no client. Uploads R2 já são presignados via server fn protegida.
+Novos módulos em `src/lib/admin/`:
+- `categories.functions.ts`: list/create/update/delete/reorder, suporte a subcategoria, toggle de menu.
+- `collections.functions.ts`: CRUD de coleções.
+- `variants.functions.ts`: CRUD de variações por produto, ajuste de estoque por variação.
+- Reformar `products.functions.ts`:
+  - Remover enum hardcoded de SECTION_SLUGS — aceitar `category_id` livre.
+  - Aceitar `collection_id`, `sort_order`, `has_variants`, lista de variantes.
+  - `duplicateProduct(id)` (clona produto + imagens + variantes, novo slug).
+- Reformar `stock.functions.ts`:
+  - Aceitar `variant_id` opcional.
+  - Listar alertas por produto **e** por variação.
+- Atualizar `storefront.functions.ts` (público):
+  - `listPublicProducts({ categorySlug?, collectionSlug?, onlyOnSale?, onlyLaunch? })`
+  - Retornar variantes (tamanhos/cores disponíveis).
+  - `listPublicCategories()` para o menu.
 
-### O que **não** muda nesta Fase 1
-- Visual do storefront público (`/`, `/sapatos`, etc.) permanece igual.
-- Checkout atual permanece.
-- Login/registro atual permanece.
+## Fase 3 — UI Admin
+
+Novas páginas:
+- `/admin/categorias` — árvore (categoria + subcategorias), drag-handle de ordenação, toggle "exibir no menu", upload de imagem.
+- `/admin/colecoes` — CRUD simples (lista + form).
+- `ProductForm` reescrito:
+  - Selector de categoria/subcategoria livre (combobox com search), **não** mais 5 abas fixas.
+  - Selector de coleção (opcional).
+  - Aba **Variações**: tabela editável (Tamanho × Cor × SKU × Estoque × Preço override). Botão "Gerar grade" a partir de listas de tamanhos e cores.
+  - Botão **Duplicar produto**.
+  - Campo `sort_order`.
+- `/admin/produtos` lista:
+  - Ações: ativar/desativar (inline), duplicar, excluir (já existe), reordenar.
+- `/admin/estoque` ampliado:
+  - Mostrar variações, filtro por produto/variação, motivo, exportar CSV.
+  - Alertas incluem variações abaixo do mínimo.
+
+## Fase 4 — Storefront (sincronização)
+
+- Substituir `src/data/catalog.ts` como fonte → `listPublicProducts` é único source-of-truth.
+- Cada rota (`/sapatos`, `/bolsas`, `/cintos`, `/novidades`, `/promocao`) consulta por `categorySlug` ou flags vindas do banco.
+- Header/menu usa `listPublicCategories({ inMenu: true, ordered: true })` em vez de links hardcoded.
+- `ProductDetailModal`: exibe seletor de tamanho/cor a partir de `scz_product_variants` quando `has_variants = true`; estoque mostrado por variação.
+- Invalidação automática: toda mutation admin invalida `["public-products"]` e `["public-categories"]`.
+
+## Fase 5 — Validação
+
+- Testes manuais via Playwright em modo headless:
+  1. Criar categoria + subcategoria → aparece no menu.
+  2. Criar coleção "Verão 2026".
+  3. Criar produto com 2 tamanhos × 2 cores → grade de 4 variantes salva.
+  4. Editar preço promocional → reflete na vitrine.
+  5. Reduzir estoque de uma variação → alerta aparece.
+  6. Duplicar produto → novo slug, mesma estrutura.
+  7. Desativar produto → some da vitrine.
+  8. Excluir categoria com produtos → bloqueia ou recategoriza.
+- Conferir `useServerFn` em todos os botões; toasts de sucesso/erro com mensagem clara.
+
+## Detalhes técnicos
+
+- **Compatibilidade retroativa**: produtos existentes ganham `has_variants = false` e continuam funcionando com `stock_qty` no produto.
+- **Slugs únicos** validados no servidor (categorias, coleções, produtos).
+- **Cascade**: deletar produto → deleta variants + images + movements (CASCADE no FK).
+- **Performance**: índices em `scz_product_variants(product_id)`, `scz_categories(parent_id, sort_order, is_in_menu)`.
+- **Segurança**: todas as server fns admin via `requireAdmin`; storefront via anon key com RLS `is_active = true`.
+
+## O que NÃO está no escopo
+
+- Cupons, frete, gateway de pagamento, multi-loja, multi-idioma, app mobile.
+- Migração de tema visual / redesign (mantém o look-and-feel atual).
 
 ---
 
-### Confirmações antes de eu começar
-
-1. **Posso começar pela Fase 1** (migração + sidebar admin + dashboard + CRUD produtos + estoque) e seguir nas próximas conforme você aprovar? Ou prefere outra ordem (ex.: começar pelo construtor visual)?
-2. **Catálogo público**: na Fase 1 eu mantenho o storefront lendo do `catalog.ts` estático e o admin grava no Supabase em paralelo. A troca total (storefront ler do banco) fica pra Fase 3. Tudo certo?
-3. **Idioma do painel**: 100% pt-BR, certo?
+Posso começar pela **Fase 1 (migration do banco)** assim que você aprovar. As fases seguintes saem em sequência, cada uma testável antes de avançar.
