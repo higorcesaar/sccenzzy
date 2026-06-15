@@ -33,13 +33,13 @@ export default function BentoCampanha({ products, onSelect }: BentoCampanhaProps
           
           {/* Card 1: Highlight Shoe */}
           <div
-            onClick={() => onSelect(products[0])}
+            onClick={() => onSelect(primary)}
             className="group cursor-pointer bg-white border border-stone-200 rounded-3xl overflow-hidden shadow-lg transition-all duration-300 hover:border-gold-300 hover:shadow-xl flex flex-col justify-between"
           >
             <div className="relative aspect-[3/4] bg-stone-100 overflow-hidden">
               <img
-                src={products[0].images[0]}
-                alt={products[0].name}
+                src={primary.images[0] || fallback}
+                alt={primary.name}
                 className="w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500"
                 referrerPolicy="no-referrer"
               />
@@ -47,7 +47,7 @@ export default function BentoCampanha({ products, onSelect }: BentoCampanhaProps
               
               <div className="absolute bottom-6 left-6 right-6 text-white">
                 <span className="text-[9px] uppercase tracking-widest text-gold-400 font-bold block mb-1">Peça Chave</span>
-                <h3 className="font-serif text-xl font-bold leading-tight mb-2 uppercase">{products[0].name}</h3>
+                <h3 className="font-serif text-xl font-bold leading-tight mb-2 uppercase">{primary.name}</h3>
                 <p className="text-xs text-stone-200 leading-normal line-clamp-2">
                   Elegância atemporal. O clássico indispensável para montar looks incrivéis tanto no dia quanto à noite.
                 </p>
@@ -58,7 +58,7 @@ export default function BentoCampanha({ products, onSelect }: BentoCampanhaProps
                 Ver detalhes <ArrowRight className="h-4 w-4" />
               </span>
               <span className="font-mono text-sm font-bold text-neutral-900">
-                {products[0].price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                {primary.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
               </span>
             </div>
           </div>
