@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, ShoppingBag, Check, Heart, ShieldCheck, Truck, RefreshCw } from 'lucide-react';
 import { Product } from '../types';
+import { ProductMedia } from './ProductMedia';
 
 interface ProductDetailModalProps {
   isOpen: boolean;

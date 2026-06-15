@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Eye, ShoppingBag, Heart, Check } from 'lucide-react';
 import { Product } from '../types';
+import { ProductMedia } from './ProductMedia';
 
 interface ProductCardProps {
   key?: string | number;
