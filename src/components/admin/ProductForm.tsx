@@ -14,7 +14,7 @@ import {
   duplicateProduct,
 } from "@/lib/admin/products.functions";
 import { listVariants, syncProductVariants } from "@/lib/admin/variants.functions";
-import { getR2UploadUrl } from "@/lib/r2.functions";
+import { uploadProductMedia } from "@/lib/r2.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
