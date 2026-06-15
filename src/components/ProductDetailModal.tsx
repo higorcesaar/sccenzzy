@@ -213,20 +213,6 @@ export default function ProductDetailModal({ isOpen, onClose, product, onAddToCa
 
           {/* Action Row */}
           <div className="flex gap-3 pt-6 mt-6 border-t border-stone-100">
-            {/* AI Assistant */}
-            {(product.category === 'tenis' || product.category === 'salto') && (
-              <button
-                onClick={() => {
-                  onOpenAIHelper(product);
-                  onClose();
-                }}
-                className="bg-stone-50 hover:bg-gold-50 hover:text-gold-500 border border-stone-200 hover:border-gold-200/50 text-neutral-800 p-4 rounded-2xl transition-all focus:outline-none flex items-center justify-center gap-1.5 shadow-sm font-display text-xs uppercase tracking-widest font-semibold"
-                title="Conselheiro Inteligente"
-              >
-                <Sparkles className="h-5 w-5 text-gold-500 animate-pulse" /> <span>Consultar Stylist I.A.</span>
-              </button>
-            )}
-
             <button
               onClick={handleAddClick}
               disabled={justAdded}
