@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, ShoppingBag, Sparkles, Check, Heart, ShieldCheck, Truck, RefreshCw } from 'lucide-react';
+import { X, ShoppingBag, Check, Heart, ShieldCheck, Truck, RefreshCw } from 'lucide-react';
 import { Product } from '../types';
 
 interface ProductDetailModalProps {
@@ -7,10 +7,9 @@ interface ProductDetailModalProps {
   onClose: () => void;
   product: Product | null;
   onAddToCart: (product: Product, size: string) => void;
-  onOpenAIHelper: (product: Product) => void;
 }
 
-export default function ProductDetailModal({ isOpen, onClose, product, onAddToCart, onOpenAIHelper }: ProductDetailModalProps) {
+export default function ProductDetailModal({ isOpen, onClose, product, onAddToCart }: ProductDetailModalProps) {
   const [selectedSize, setSelectedSize] = useState('');
   const [isLiked, setIsLiked] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
