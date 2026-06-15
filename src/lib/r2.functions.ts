@@ -119,6 +119,10 @@ export const uploadProductMedia = createServerFn({ method: "POST" })
       throw new Error(`Falha no upload R2 (${res.status}): ${txt.slice(0, 200)}`);
     }
 
-    const publicUrl = publicBase ? `${publicBase.replace(/\/$/, "")}/${key}` : endpoint;
+    // Sempre usa o proxy /api/public/r2/<key> — funciona mesmo se o bucket
+    // R2 não estiver com domínio público configurado.
+    const publicUrl = `/api/public/r2/${key}`;
     return { publicUrl, key };
   });
+
+
