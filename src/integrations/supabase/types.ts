@@ -594,7 +594,9 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          image_url: string | null
           is_active: boolean
+          is_in_menu: boolean
           name: string
           parent_id: string | null
           position: number
@@ -606,7 +608,9 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean
+          is_in_menu?: boolean
           name: string
           parent_id?: string | null
           position?: number
@@ -618,7 +622,9 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean
+          is_in_menu?: boolean
           name?: string
           parent_id?: string | null
           position?: number
@@ -635,6 +641,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      scz_collections: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          name: string
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       scz_order_items: {
         Row: {
@@ -818,14 +860,81 @@ export type Database = {
           },
         ]
       }
+      scz_product_variants: {
+        Row: {
+          barcode: string | null
+          color: string | null
+          color_hex: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          model: string | null
+          price_cents: number | null
+          product_id: string
+          promo_price: number | null
+          size: string | null
+          sku: string | null
+          sort_order: number
+          stock_min: number
+          stock_qty: number
+          updated_at: string
+        }
+        Insert: {
+          barcode?: string | null
+          color?: string | null
+          color_hex?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          model?: string | null
+          price_cents?: number | null
+          product_id: string
+          promo_price?: number | null
+          size?: string | null
+          sku?: string | null
+          sort_order?: number
+          stock_min?: number
+          stock_qty?: number
+          updated_at?: string
+        }
+        Update: {
+          barcode?: string | null
+          color?: string | null
+          color_hex?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          model?: string | null
+          price_cents?: number | null
+          product_id?: string
+          promo_price?: number | null
+          size?: string | null
+          sku?: string | null
+          sort_order?: number
+          stock_min?: number
+          stock_qty?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scz_product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "scz_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scz_products: {
         Row: {
           brand: string | null
           category_id: string | null
+          collection_id: string | null
           cost_price: number | null
           created_at: string
           depth_cm: number | null
           description: string | null
+          has_variants: boolean
           height_cm: number | null
           id: string
           internal_code: string | null
@@ -846,6 +955,7 @@ export type Database = {
           short_description: string | null
           sku: string | null
           slug: string
+          sort_order: number
           stock: number
           stock_min: number
           stock_qty: number
@@ -860,10 +970,12 @@ export type Database = {
         Insert: {
           brand?: string | null
           category_id?: string | null
+          collection_id?: string | null
           cost_price?: number | null
           created_at?: string
           depth_cm?: number | null
           description?: string | null
+          has_variants?: boolean
           height_cm?: number | null
           id?: string
           internal_code?: string | null
@@ -884,6 +996,7 @@ export type Database = {
           short_description?: string | null
           sku?: string | null
           slug: string
+          sort_order?: number
           stock?: number
           stock_min?: number
           stock_qty?: number
@@ -898,10 +1011,12 @@ export type Database = {
         Update: {
           brand?: string | null
           category_id?: string | null
+          collection_id?: string | null
           cost_price?: number | null
           created_at?: string
           depth_cm?: number | null
           description?: string | null
+          has_variants?: boolean
           height_cm?: number | null
           id?: string
           internal_code?: string | null
@@ -922,6 +1037,7 @@ export type Database = {
           short_description?: string | null
           sku?: string | null
           slug?: string
+          sort_order?: number
           stock?: number
           stock_min?: number
           stock_qty?: number
@@ -939,6 +1055,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "scz_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scz_products_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "scz_collections"
             referencedColumns: ["id"]
           },
           {
@@ -981,6 +1104,7 @@ export type Database = {
           reason: string | null
           reference: string | null
           user_id: string | null
+          variant_id: string | null
         }
         Insert: {
           created_at?: string
@@ -991,6 +1115,7 @@ export type Database = {
           reason?: string | null
           reference?: string | null
           user_id?: string | null
+          variant_id?: string | null
         }
         Update: {
           created_at?: string
@@ -1001,6 +1126,7 @@ export type Database = {
           reason?: string | null
           reference?: string | null
           user_id?: string | null
+          variant_id?: string | null
         }
         Relationships: [
           {
@@ -1008,6 +1134,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "scz_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scz_stock_movements_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "scz_product_variants"
             referencedColumns: ["id"]
           },
         ]
