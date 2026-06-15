@@ -308,10 +308,10 @@ export function ProductForm({ initial }: { initial?: any }) {
                     </SelectContent>
                   </Select>
                 </Field>
-                {subOptions.length > 0 && (
-                  <Field label="Subcategoria">
-                    <Select value={form.watch("collection_id") ?? ""} onValueChange={(v) => form.setValue("subcategory_id" as any, v || null)}>
-                      <SelectTrigger><SelectValue placeholder="(opcional)" /></SelectTrigger>
+                {selectedCat && subOptions.length > 0 && (
+                  <Field label="Subcategoria (escolha a categoria filha como principal se desejar)">
+                    <Select value={selectedCat ?? ""} onValueChange={(v) => form.setValue("category_id", v || null)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {subOptions.map((c: any) => (
                           <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
