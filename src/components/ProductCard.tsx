@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, ShoppingBag, Sparkles, Heart, Check, HelpCircle } from 'lucide-react';
+import { Eye, ShoppingBag, Heart, Check } from 'lucide-react';
 import { Product } from '../types';
 
 interface ProductCardProps {
