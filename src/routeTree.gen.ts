@@ -34,6 +34,7 @@ import { Route as AdminProdutosIdRouteImport } from './routes/admin.produtos.$id
 import { Route as AdminPedidosIdRouteImport } from './routes/admin.pedidos.$id'
 import { Route as AdminPaginasIdRouteImport } from './routes/admin.paginas.$id'
 import { Route as AdminClientesIdRouteImport } from './routes/admin.clientes.$id'
+import { Route as ApiPublicR2SplatRouteImport } from './routes/api/public/r2.$'
 
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
@@ -160,6 +161,11 @@ const AdminClientesIdRoute = AdminClientesIdRouteImport.update({
   path: '/clientes/$id',
   getParentRoute: () => AdminRoute,
 } as any)
+const ApiPublicR2SplatRoute = ApiPublicR2SplatRouteImport.update({
+  id: '/api/public/r2/$',
+  path: '/api/public/r2/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -187,6 +193,7 @@ export interface FileRoutesByFullPath {
   '/admin/paginas/': typeof AdminPaginasIndexRoute
   '/admin/pedidos/': typeof AdminPedidosIndexRoute
   '/admin/produtos/': typeof AdminProdutosIndexRoute
+  '/api/public/r2/$': typeof ApiPublicR2SplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -213,6 +220,7 @@ export interface FileRoutesByTo {
   '/admin/paginas': typeof AdminPaginasIndexRoute
   '/admin/pedidos': typeof AdminPedidosIndexRoute
   '/admin/produtos': typeof AdminProdutosIndexRoute
+  '/api/public/r2/$': typeof ApiPublicR2SplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -241,6 +249,7 @@ export interface FileRoutesById {
   '/admin/paginas/': typeof AdminPaginasIndexRoute
   '/admin/pedidos/': typeof AdminPedidosIndexRoute
   '/admin/produtos/': typeof AdminProdutosIndexRoute
+  '/api/public/r2/$': typeof ApiPublicR2SplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -270,6 +279,7 @@ export interface FileRouteTypes {
     | '/admin/paginas/'
     | '/admin/pedidos/'
     | '/admin/produtos/'
+    | '/api/public/r2/$'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -296,6 +306,7 @@ export interface FileRouteTypes {
     | '/admin/paginas'
     | '/admin/pedidos'
     | '/admin/produtos'
+    | '/api/public/r2/$'
   id:
     | '__root__'
     | '/'
@@ -323,6 +334,7 @@ export interface FileRouteTypes {
     | '/admin/paginas/'
     | '/admin/pedidos/'
     | '/admin/produtos/'
+    | '/api/public/r2/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -335,6 +347,7 @@ export interface RootRouteChildren {
   CSlugRoute: typeof CSlugRoute
   ColecaoSlugRoute: typeof ColecaoSlugRoute
   PSlugRoute: typeof PSlugRoute
+  ApiPublicR2SplatRoute: typeof ApiPublicR2SplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -514,6 +527,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminClientesIdRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/api/public/r2/$': {
+      id: '/api/public/r2/$'
+      path: '/api/public/r2/$'
+      fullPath: '/api/public/r2/$'
+      preLoaderRoute: typeof ApiPublicR2SplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -567,6 +587,7 @@ const rootRouteChildren: RootRouteChildren = {
   CSlugRoute: CSlugRoute,
   ColecaoSlugRoute: ColecaoSlugRoute,
   PSlugRoute: PSlugRoute,
+  ApiPublicR2SplatRoute: ApiPublicR2SplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
