@@ -9,7 +9,11 @@ interface BentoCampanhaProps {
 }
 
 export default function BentoCampanha({ products, onSelect }: BentoCampanhaProps) {
-  const highlightScents = products.filter(p => p.id === 'sc-01' || p.id === 'sc-05');
+  const featured = products.filter(p => p.images && p.images.length > 0);
+  const primary = featured[0];
+  const secondary = featured[1] || featured[0];
+  if (!primary) return null;
+  const fallback = "https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?auto=format&fit=crop&q=80&w=500";
 
   return (
     <section className="py-20 bg-stone-100 text-stone-900 px-4 sm:px-6 lg:px-8 relative border-t border-stone-200" id="campaign-bento">
