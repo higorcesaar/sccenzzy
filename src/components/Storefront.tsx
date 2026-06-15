@@ -26,8 +26,6 @@ export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidad
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [surveyProduct, setSurveyProduct] = useState<Product | null>(null);
-  const [isAIHelperOpen, setIsAIHelperOpen] = useState(false);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [emailInput, setEmailInput] = useState('');
