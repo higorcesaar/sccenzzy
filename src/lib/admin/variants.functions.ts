@@ -48,8 +48,8 @@ export const syncProductVariants = createServerFn({ method: "POST" })
       .select("id,stock_qty")
       .eq("product_id", data.product_id);
 
-    const existingIds = new Set((existing ?? []).map((v: any) => v.id));
-    const sentIds = new Set(data.variants.filter((v) => v.id).map((v) => v.id as string));
+    const existingIds = new Set<string>((existing ?? []).map((v: any) => v.id as string));
+    const sentIds = new Set<string>(data.variants.filter((v) => v.id).map((v) => v.id as string));
 
     // Delete removed variants
     const toDelete = [...existingIds].filter((id) => !sentIds.has(id));
