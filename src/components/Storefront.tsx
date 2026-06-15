@@ -84,10 +84,6 @@ export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidad
     setSearchTerm(term);
   };
 
-  const handleOpenAIHelper = (product: Product) => {
-    setSurveyProduct(product);
-    setIsAIHelperOpen(true);
-  };
 
   const handleNewsletterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -502,13 +498,6 @@ export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidad
         subtotal={subtotal}
         discount={couponDiscount}
         couponCode={activeCoupon}
-      />
-
-      {/* AI advisor recommendation assistant panel */}
-      <AIHelperModal
-        isOpen={isAIHelperOpen}
-        onClose={() => setIsAIHelperOpen(false)}
-        product={surveyProduct}
       />
 
       {/* Product Detail Modal */}
