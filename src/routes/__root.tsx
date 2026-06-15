@@ -81,6 +81,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "description", content: "Boutique exclusiva de calçados e bolsas femininas premium." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:title", content: "Scenzzy — Boutique Premium" },
+      { name: "twitter:title", content: "Scenzzy — Boutique Premium" },
+      { property: "og:description", content: "Boutique exclusiva de calçados e bolsas femininas premium." },
+      { name: "twitter:description", content: "Boutique exclusiva de calçados e bolsas femininas premium." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/fa1d1ac9-c43a-4fea-84b0-1966bef1e7d8/id-preview-a186113a--b2367dbb-9de5-40c1-9c70-2b0a6ff48ae1.lovable.app-1781445572395.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/fa1d1ac9-c43a-4fea-84b0-1966bef1e7d8/id-preview-a186113a--b2367dbb-9de5-40c1-9c70-2b0a6ff48ae1.lovable.app-1781445572395.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
