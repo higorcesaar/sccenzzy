@@ -9,7 +9,6 @@ import CheckoutModal from './CheckoutModal';
 import CampaignBanner from './CampaignBanner';
 import BentoCampanha from './BentoCampanha';
 import StoreFinder from './StoreFinder';
-import AIHelperModal from './AIHelperModal';
 import ProductDetailModal from './ProductDetailModal';
 import { Product, CartItem } from '../types';
 import { listPublicProducts } from '../lib/storefront.functions';
@@ -27,8 +26,6 @@ export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidad
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [surveyProduct, setSurveyProduct] = useState<Product | null>(null);
-  const [isAIHelperOpen, setIsAIHelperOpen] = useState(false);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [emailInput, setEmailInput] = useState('');
@@ -87,10 +84,6 @@ export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidad
     setSearchTerm(term);
   };
 
-  const handleOpenAIHelper = (product: Product) => {
-    setSurveyProduct(product);
-    setIsAIHelperOpen(true);
-  };
 
   const handleNewsletterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -259,7 +252,7 @@ export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidad
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
               {tenisList.map((item, index) => (
-                <ProductCard key={`${item.id}-${index}`} product={item} onAddToCart={handleAddToCart} onSelect={handleProductSelect} onOpenAIHelper={handleOpenAIHelper} />
+                <ProductCard key={`${item.id}-${index}`} product={item} onAddToCart={handleAddToCart} onSelect={handleProductSelect} />
               ))}
             </div>
           </section>
@@ -274,7 +267,7 @@ export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidad
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
               {saltosList.map((item, index) => (
-                <ProductCard key={`${item.id}-${index}`} product={item} onAddToCart={handleAddToCart} onSelect={handleProductSelect} onOpenAIHelper={handleOpenAIHelper} />
+                <ProductCard key={`${item.id}-${index}`} product={item} onAddToCart={handleAddToCart} onSelect={handleProductSelect} />
               ))}
             </div>
           </section>
@@ -291,7 +284,7 @@ export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidad
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
               {bolsasList.map((item, index) => (
-                <ProductCard key={`${item.id}-${index}`} product={item} onAddToCart={handleAddToCart} onSelect={handleProductSelect} onOpenAIHelper={handleOpenAIHelper} />
+                <ProductCard key={`${item.id}-${index}`} product={item} onAddToCart={handleAddToCart} onSelect={handleProductSelect} />
               ))}
             </div>
           </section>
@@ -306,7 +299,7 @@ export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidad
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
               {cintosList.map((item, index) => (
-                <ProductCard key={`${item.id}-${index}`} product={item} onAddToCart={handleAddToCart} onSelect={handleProductSelect} onOpenAIHelper={handleOpenAIHelper} />
+                <ProductCard key={`${item.id}-${index}`} product={item} onAddToCart={handleAddToCart} onSelect={handleProductSelect} />
               ))}
             </div>
           </section>
@@ -321,7 +314,7 @@ export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidad
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
               {acessoriosList.map((item, index) => (
-                <ProductCard key={`${item.id}-${index}`} product={item} onAddToCart={handleAddToCart} onSelect={handleProductSelect} onOpenAIHelper={handleOpenAIHelper} />
+                <ProductCard key={`${item.id}-${index}`} product={item} onAddToCart={handleAddToCart} onSelect={handleProductSelect} />
               ))}
             </div>
           </section>
@@ -412,7 +405,7 @@ export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidad
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {filteredProducts.filter(p => p.originalPrice).length > 0 ? (
               filteredProducts.filter(p => p.originalPrice).map((item, index) => (
-                <ProductCard key={`${item.id}-${index}-promo`} product={item} onAddToCart={handleAddToCart} onSelect={handleProductSelect} onOpenAIHelper={handleOpenAIHelper} />
+                <ProductCard key={`${item.id}-${index}-promo`} product={item} onAddToCart={handleAddToCart} onSelect={handleProductSelect} />
               ))
             ) : (
               <div className="col-span-full text-center py-20 text-stone-500 font-sans">
@@ -507,20 +500,13 @@ export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidad
         couponCode={activeCoupon}
       />
 
-      {/* AI advisor recommendation assistant panel */}
-      <AIHelperModal
-        isOpen={isAIHelperOpen}
-        onClose={() => setIsAIHelperOpen(false)}
-        product={surveyProduct}
-      />
-
       {/* Product Detail Modal */}
       <ProductDetailModal
         isOpen={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
         product={selectedProduct}
         onAddToCart={handleAddToCart}
-        onOpenAIHelper={handleOpenAIHelper}
+       
       />
 
     </div>

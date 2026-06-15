@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, ShoppingBag, Sparkles, Heart, Check, HelpCircle } from 'lucide-react';
+import { Eye, ShoppingBag, Heart, Check } from 'lucide-react';
 import { Product } from '../types';
 
 interface ProductCardProps {
@@ -7,10 +7,9 @@ interface ProductCardProps {
   product: Product;
   onAddToCart: (product: Product, size: string) => void;
   onSelect: (product: Product) => void;
-  onOpenAIHelper: (product: Product) => void;
 }
 
-export default function ProductCard({ product, onAddToCart, onSelect, onOpenAIHelper }: ProductCardProps) {
+export default function ProductCard({ product, onAddToCart, onSelect }: ProductCardProps) {
   const [selectedSize, setSelectedSize] = useState(product.sizes[0]);
   const [isLiked, setIsLiked] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
@@ -188,21 +187,6 @@ export default function ProductCard({ product, onAddToCart, onSelect, onOpenAIHe
           </div>
 
           <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-            {/* AI Advisor Assistant helper button */}
-            {(product.category === 'tenis' || product.category === 'salto') && (
-              <button
-                onClick={() => onOpenAIHelper(product)}
-                className="bg-stone-100 hover:bg-gold-50 hover:text-gold-500 text-neutral-800 p-2.5 rounded-xl border border-stone-200 hover:border-gold-200 transition-all focus:outline-none flex items-center justify-center relative group/btn"
-                title="Conselheiro de Estilo Inteligente"
-                aria-label="Sugestão I.A. de Estilo"
-              >
-                <Sparkles className="h-4.5 w-4.5 animate-pulse" />
-                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max bg-stone-900 text-stone-100 text-[9px] py-1 px-2 rounded-md tracking-wider opacity-0 group-hover/btn:opacity-100 transition-opacity pointer-events-none select-none uppercase font-display">
-                  Guia de Estilo I.A.
-                </span>
-              </button>
-            )}
-
             {/* Main Add Button */}
             <button
               onClick={handleAddClick}
