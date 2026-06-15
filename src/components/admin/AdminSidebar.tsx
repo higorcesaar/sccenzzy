@@ -10,6 +10,8 @@ import {
   Settings,
   Wand2,
   LogOut,
+  FolderTree,
+  Sparkles,
 } from "lucide-react";
 import {
   Sidebar,
@@ -33,6 +35,8 @@ const groups: { label: string; items: Item[] }[] = [
     label: "Catálogo",
     items: [
       { title: "Produtos", url: "/admin/produtos", icon: Package },
+      { title: "Categorias", url: "/admin/categorias", icon: FolderTree },
+      { title: "Coleções", url: "/admin/colecoes", icon: Sparkles },
       { title: "Estoque", url: "/admin/estoque", icon: Warehouse },
     ],
   },
