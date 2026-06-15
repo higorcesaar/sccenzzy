@@ -104,17 +104,12 @@ export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidad
   const [couponDiscount, setCouponDiscount] = useState(0);
 
   const handleTriggerCheckout = (coupon: string, discountAmount: number) => {
-    if (!user) {
-      addToast('Por favor, faça login em sua conta para prosseguir com a finalização de compra.', 'info', 'Autenticação Necessária');
-      setIsCartOpen(false);
-      navigate({ to: '/login' });
-      return;
-    }
     setActiveCoupon(coupon);
     setCouponDiscount(discountAmount);
     setIsCartOpen(false);
     setIsCheckoutOpen(true);
   };
+
 
   // Live catalog from Supabase — 100% dinâmico.
   const fetchPublic = useServerFn(listPublicProducts);
