@@ -20,6 +20,8 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as PSlugRouteImport } from './routes/p.$slug'
+import { Route as ColecaoSlugRouteImport } from './routes/colecao.$slug'
+import { Route as CSlugRouteImport } from './routes/c.$slug'
 import { Route as AdminEstoqueRouteImport } from './routes/admin.estoque'
 import { Route as AdminEditorRouteImport } from './routes/admin.editor'
 import { Route as AdminProdutosIndexRouteImport } from './routes/admin.produtos.index'
@@ -89,6 +91,16 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
 const PSlugRoute = PSlugRouteImport.update({
   id: '/p/$slug',
   path: '/p/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ColecaoSlugRoute = ColecaoSlugRouteImport.update({
+  id: '/colecao/$slug',
+  path: '/colecao/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CSlugRoute = CSlugRouteImport.update({
+  id: '/c/$slug',
+  path: '/c/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminEstoqueRoute = AdminEstoqueRouteImport.update({
@@ -179,6 +191,8 @@ export interface FileRoutesByFullPath {
   '/sapatos': typeof SapatosRoute
   '/admin/editor': typeof AdminEditorRoute
   '/admin/estoque': typeof AdminEstoqueRoute
+  '/c/$slug': typeof CSlugRoute
+  '/colecao/$slug': typeof ColecaoSlugRoute
   '/p/$slug': typeof PSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/clientes/$id': typeof AdminClientesIdRoute
@@ -206,6 +220,8 @@ export interface FileRoutesByTo {
   '/sapatos': typeof SapatosRoute
   '/admin/editor': typeof AdminEditorRoute
   '/admin/estoque': typeof AdminEstoqueRoute
+  '/c/$slug': typeof CSlugRoute
+  '/colecao/$slug': typeof ColecaoSlugRoute
   '/p/$slug': typeof PSlugRoute
   '/admin': typeof AdminIndexRoute
   '/admin/clientes/$id': typeof AdminClientesIdRoute
@@ -235,6 +251,8 @@ export interface FileRoutesById {
   '/sapatos': typeof SapatosRoute
   '/admin/editor': typeof AdminEditorRoute
   '/admin/estoque': typeof AdminEstoqueRoute
+  '/c/$slug': typeof CSlugRoute
+  '/colecao/$slug': typeof ColecaoSlugRoute
   '/p/$slug': typeof PSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/clientes/$id': typeof AdminClientesIdRoute
@@ -265,6 +283,8 @@ export interface FileRouteTypes {
     | '/sapatos'
     | '/admin/editor'
     | '/admin/estoque'
+    | '/c/$slug'
+    | '/colecao/$slug'
     | '/p/$slug'
     | '/admin/'
     | '/admin/clientes/$id'
@@ -292,6 +312,8 @@ export interface FileRouteTypes {
     | '/sapatos'
     | '/admin/editor'
     | '/admin/estoque'
+    | '/c/$slug'
+    | '/colecao/$slug'
     | '/p/$slug'
     | '/admin'
     | '/admin/clientes/$id'
@@ -320,6 +342,8 @@ export interface FileRouteTypes {
     | '/sapatos'
     | '/admin/editor'
     | '/admin/estoque'
+    | '/c/$slug'
+    | '/colecao/$slug'
     | '/p/$slug'
     | '/admin/'
     | '/admin/clientes/$id'
@@ -347,6 +371,8 @@ export interface RootRouteChildren {
   PromocaoRoute: typeof PromocaoRoute
   RegisterRoute: typeof RegisterRoute
   SapatosRoute: typeof SapatosRoute
+  CSlugRoute: typeof CSlugRoute
+  ColecaoSlugRoute: typeof ColecaoSlugRoute
   PSlugRoute: typeof PSlugRoute
 }
 
@@ -427,6 +453,20 @@ declare module '@tanstack/react-router' {
       path: '/p/$slug'
       fullPath: '/p/$slug'
       preLoaderRoute: typeof PSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/colecao/$slug': {
+      id: '/colecao/$slug'
+      path: '/colecao/$slug'
+      fullPath: '/colecao/$slug'
+      preLoaderRoute: typeof ColecaoSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/c/$slug': {
+      id: '/c/$slug'
+      path: '/c/$slug'
+      fullPath: '/c/$slug'
+      preLoaderRoute: typeof CSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/estoque': {
@@ -587,6 +627,8 @@ const rootRouteChildren: RootRouteChildren = {
   PromocaoRoute: PromocaoRoute,
   RegisterRoute: RegisterRoute,
   SapatosRoute: SapatosRoute,
+  CSlugRoute: CSlugRoute,
+  ColecaoSlugRoute: ColecaoSlugRoute,
   PSlugRoute: PSlugRoute,
 }
 export const routeTree = rootRouteImport
