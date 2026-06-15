@@ -35,7 +35,7 @@ const productSchema = z.object({
   stock_min: z.number().int().min(0).default(0),
   sort_order: z.number().int().min(0).default(0),
   tags: z.array(z.string().max(40)).max(20).optional().nullable(),
-  images: z.array(z.string().url()).max(20).optional().nullable(),
+  images: z.array(z.string().min(1).max(500)).max(20).optional().nullable(),
 });
 
 function slugify(input: string): string {
