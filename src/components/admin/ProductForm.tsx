@@ -386,16 +386,77 @@ export function ProductForm({ initial }: { initial?: any }) {
                 <p className="text-[11px] text-stone-500">JPG, PNG, WebP, MP4 — múltiplos arquivos</p>
               </label>
               {imgs.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {imgs.map((url: string, i: number) => (
-                    <div key={url} className="relative group rounded-lg overflow-hidden border border-stone-200 bg-stone-50 aspect-square">
-                      {/\.(mp4|mov|webm)$/i.test(url) ? <video src={url} className="w-full h-full object-cover" muted /> : <img src={url} className="w-full h-full object-cover" />}
-                      <button type="button" onClick={() => setImages(imgs.filter((_: string, j: number) => j !== i))} className="absolute top-1 right-1 h-6 w-6 rounded-full bg-white/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
-                        <X className="h-3 w-3" />
-                      </button>
-                      {i === 0 && <div className="absolute bottom-1 left-1 text-[9px] uppercase tracking-wider bg-amber-600 text-white px-1.5 py-0.5 rounded">Capa</div>}
-                    </div>
-                  ))}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold text-stone-700 uppercase tracking-wider">
+                      Mídias do produto ({imgs.length})
+                    </p>
+                    <p className="text-[11px] text-stone-500">
+                      A primeira é a capa. Use as setas para reordenar — essa é a sequência exibida na página do produto.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {imgs.map((url: string, i: number) => (
+                      <div key={url + i} className="relative group rounded-lg overflow-hidden border border-stone-200 bg-stone-50 aspect-square">
+                        {/\.(mp4|mov|webm)$/i.test(url) ? (
+                          <video src={url} className="w-full h-full object-cover" muted />
+                        ) : (
+                          <img src={url} className="w-full h-full object-cover" alt={`mídia ${i + 1}`} />
+                        )}
+                        <span className="absolute top-1 left-1 text-[10px] font-mono font-bold bg-neutral-900/80 text-white px-1.5 py-0.5 rounded">
+                          {i + 1}
+                        </span>
+                        {i === 0 && (
+                          <div className="absolute bottom-1 left-1 flex items-center gap-1 text-[9px] uppercase tracking-wider bg-amber-600 text-white px-1.5 py-0.5 rounded">
+                            <Star className="h-2.5 w-2.5" /> Capa
+                          </div>
+                        )}
+                        <div className="absolute inset-x-1 bottom-1 flex items-center justify-between gap-1 opacity-0 group-hover:opacity-100 transition">
+                          <div className="flex gap-1">
+                            <button
+                              type="button"
+                              title="Mover para a esquerda"
+                              onClick={() => moveImage(i, i - 1)}
+                              disabled={i === 0}
+                              className="h-6 w-6 rounded bg-white/90 flex items-center justify-center disabled:opacity-30 hover:bg-white"
+                            >
+                              <ArrowUp className="h-3 w-3 -rotate-90" />
+                            </button>
+                            <button
+                              type="button"
+                              title="Mover para a direita"
+                              onClick={() => moveImage(i, i + 1)}
+                              disabled={i === imgs.length - 1}
+                              className="h-6 w-6 rounded bg-white/90 flex items-center justify-center disabled:opacity-30 hover:bg-white"
+                            >
+                              <ArrowDown className="h-3 w-3 -rotate-90" />
+                            </button>
+                            {i !== 0 && (
+                              <button
+                                type="button"
+                                title="Tornar capa"
+                                onClick={() => moveImage(i, 0)}
+                                className="h-6 w-6 rounded bg-white/90 flex items-center justify-center hover:bg-amber-100"
+                              >
+                                <Star className="h-3 w-3 text-amber-600" />
+                              </button>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            title="Remover"
+                            onClick={() => removeImage(i)}
+                            className="h-6 w-6 rounded bg-white/90 flex items-center justify-center hover:bg-rose-100"
+                          >
+                            <X className="h-3 w-3 text-rose-600" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+                    ⚠️ Lembre de clicar em <strong>Salvar e publicar</strong> para que as alterações de mídia sejam gravadas no banco.
+                  </p>
                 </div>
               )}
             </CardContent>
