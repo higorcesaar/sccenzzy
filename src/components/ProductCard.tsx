@@ -63,11 +63,11 @@ export default function ProductCard({ product, onAddToCart, onSelect }: ProductC
         >
           {product.images.map((img, idx) => (
             <div key={idx} className="w-full h-full flex-shrink-0 relative">
-              <img
+              <ProductMedia
                 src={img}
-                alt={`${product.name} - imagem ${idx + 1}`}
+                alt={`${product.name} - mídia ${idx + 1}`}
                 className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                referrerPolicy="no-referrer"
+                autoPlay={idx === currentImageIndex}
               />
             </div>
           ))}
