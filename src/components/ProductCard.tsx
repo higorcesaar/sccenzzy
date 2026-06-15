@@ -7,10 +7,9 @@ interface ProductCardProps {
   product: Product;
   onAddToCart: (product: Product, size: string) => void;
   onSelect: (product: Product) => void;
-  onOpenAIHelper: (product: Product) => void;
 }
 
-export default function ProductCard({ product, onAddToCart, onSelect, onOpenAIHelper }: ProductCardProps) {
+export default function ProductCard({ product, onAddToCart, onSelect }: ProductCardProps) {
   const [selectedSize, setSelectedSize] = useState(product.sizes[0]);
   const [isLiked, setIsLiked] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
