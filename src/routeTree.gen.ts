@@ -9,13 +9,10 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SapatosRouteImport } from './routes/sapatos'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as PromocaoRouteImport } from './routes/promocao'
 import { Route as NovidadesRouteImport } from './routes/novidades'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as CintosRouteImport } from './routes/cintos'
-import { Route as BolsasRouteImport } from './routes/bolsas'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
@@ -38,11 +35,6 @@ import { Route as AdminPedidosIdRouteImport } from './routes/admin.pedidos.$id'
 import { Route as AdminPaginasIdRouteImport } from './routes/admin.paginas.$id'
 import { Route as AdminClientesIdRouteImport } from './routes/admin.clientes.$id'
 
-const SapatosRoute = SapatosRouteImport.update({
-  id: '/sapatos',
-  path: '/sapatos',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
@@ -61,16 +53,6 @@ const NovidadesRoute = NovidadesRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CintosRoute = CintosRouteImport.update({
-  id: '/cintos',
-  path: '/cintos',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BolsasRoute = BolsasRouteImport.update({
-  id: '/bolsas',
-  path: '/bolsas',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -182,13 +164,10 @@ const AdminClientesIdRoute = AdminClientesIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
-  '/bolsas': typeof BolsasRoute
-  '/cintos': typeof CintosRoute
   '/login': typeof LoginRoute
   '/novidades': typeof NovidadesRoute
   '/promocao': typeof PromocaoRoute
   '/register': typeof RegisterRoute
-  '/sapatos': typeof SapatosRoute
   '/admin/editor': typeof AdminEditorRoute
   '/admin/estoque': typeof AdminEstoqueRoute
   '/c/$slug': typeof CSlugRoute
@@ -211,13 +190,10 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/bolsas': typeof BolsasRoute
-  '/cintos': typeof CintosRoute
   '/login': typeof LoginRoute
   '/novidades': typeof NovidadesRoute
   '/promocao': typeof PromocaoRoute
   '/register': typeof RegisterRoute
-  '/sapatos': typeof SapatosRoute
   '/admin/editor': typeof AdminEditorRoute
   '/admin/estoque': typeof AdminEstoqueRoute
   '/c/$slug': typeof CSlugRoute
@@ -242,13 +218,10 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
-  '/bolsas': typeof BolsasRoute
-  '/cintos': typeof CintosRoute
   '/login': typeof LoginRoute
   '/novidades': typeof NovidadesRoute
   '/promocao': typeof PromocaoRoute
   '/register': typeof RegisterRoute
-  '/sapatos': typeof SapatosRoute
   '/admin/editor': typeof AdminEditorRoute
   '/admin/estoque': typeof AdminEstoqueRoute
   '/c/$slug': typeof CSlugRoute
@@ -274,13 +247,10 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
-    | '/bolsas'
-    | '/cintos'
     | '/login'
     | '/novidades'
     | '/promocao'
     | '/register'
-    | '/sapatos'
     | '/admin/editor'
     | '/admin/estoque'
     | '/c/$slug'
@@ -303,13 +273,10 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/bolsas'
-    | '/cintos'
     | '/login'
     | '/novidades'
     | '/promocao'
     | '/register'
-    | '/sapatos'
     | '/admin/editor'
     | '/admin/estoque'
     | '/c/$slug'
@@ -333,13 +300,10 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
-    | '/bolsas'
-    | '/cintos'
     | '/login'
     | '/novidades'
     | '/promocao'
     | '/register'
-    | '/sapatos'
     | '/admin/editor'
     | '/admin/estoque'
     | '/c/$slug'
@@ -364,13 +328,10 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
-  BolsasRoute: typeof BolsasRoute
-  CintosRoute: typeof CintosRoute
   LoginRoute: typeof LoginRoute
   NovidadesRoute: typeof NovidadesRoute
   PromocaoRoute: typeof PromocaoRoute
   RegisterRoute: typeof RegisterRoute
-  SapatosRoute: typeof SapatosRoute
   CSlugRoute: typeof CSlugRoute
   ColecaoSlugRoute: typeof ColecaoSlugRoute
   PSlugRoute: typeof PSlugRoute
@@ -378,13 +339,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/sapatos': {
-      id: '/sapatos'
-      path: '/sapatos'
-      fullPath: '/sapatos'
-      preLoaderRoute: typeof SapatosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/register': {
       id: '/register'
       path: '/register'
@@ -411,20 +365,6 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/cintos': {
-      id: '/cintos'
-      path: '/cintos'
-      fullPath: '/cintos'
-      preLoaderRoute: typeof CintosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/bolsas': {
-      id: '/bolsas'
-      path: '/bolsas'
-      fullPath: '/bolsas'
-      preLoaderRoute: typeof BolsasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -620,13 +560,10 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
-  BolsasRoute: BolsasRoute,
-  CintosRoute: CintosRoute,
   LoginRoute: LoginRoute,
   NovidadesRoute: NovidadesRoute,
   PromocaoRoute: PromocaoRoute,
   RegisterRoute: RegisterRoute,
-  SapatosRoute: SapatosRoute,
   CSlugRoute: CSlugRoute,
   ColecaoSlugRoute: ColecaoSlugRoute,
   PSlugRoute: PSlugRoute,
