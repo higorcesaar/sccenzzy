@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, ShoppingBag, Check, Heart, ShieldCheck, Truck, RefreshCw } from 'lucide-react';
 import { Product } from '../types';
+import { ProductMedia } from './ProductMedia';
 
 interface ProductDetailModalProps {
   isOpen: boolean;
@@ -60,11 +61,11 @@ export default function ProductDetailModal({ isOpen, onClose, product, onAddToCa
           >
             {product.images.map((image, idx) => (
               <div key={idx} className="w-full h-full flex-shrink-0 relative">
-                <img
+                <ProductMedia
                   src={image}
-                  alt={`${product.name} - imagem ${idx + 1}`}
+                  alt={`${product.name} - mídia ${idx + 1}`}
                   className="w-full h-full object-cover"
-                  referrerPolicy="no-referrer"
+                  autoPlay={idx === currentImageIndex}
                 />
               </div>
             ))}
