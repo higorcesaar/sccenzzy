@@ -14,7 +14,7 @@ import {
   duplicateProduct,
 } from "@/lib/admin/products.functions";
 import { listVariants, syncProductVariants } from "@/lib/admin/variants.functions";
-import { getR2UploadUrl } from "@/lib/r2.functions";
+import { uploadProductMedia } from "@/lib/r2.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -77,7 +77,7 @@ export function ProductForm({ initial }: { initial?: any }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const save = useServerFn(upsertProduct);
-  const getUploadUrl = useServerFn(getR2UploadUrl);
+  const uploadMedia = useServerFn(uploadProductMedia);
   const fetchImages = useServerFn(getProductImages);
   const fetchCategories = useServerFn(listCategories);
   const fetchCollections = useServerFn(listCollectionsForSelect);
@@ -145,18 +145,36 @@ export function ProductForm({ initial }: { initial?: any }) {
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     if (files.length === 0) return;
+    const MAX = 25 * 1024 * 1024; // 25MB
     setUploading(true);
     try {
       const next = [...imgs];
       for (const file of files) {
-        const p = await getUploadUrl({ data: { filename: file.name, contentType: file.type || "application/octet-stream" } });
-        const put = await fetch(p.uploadUrl, { method: "PUT", headers: { "Content-Type": file.type || "application/octet-stream" }, body: file });
-        if (!put.ok) throw new Error(`Falha no upload (${put.status})`);
-        next.push(p.publicUrl);
+        if (file.size > MAX) {
+          toast.error(`"${file.name}" excede 25MB e foi ignorado.`);
+          continue;
+        }
+        const buf = await file.arrayBuffer();
+        // Convert to base64 in chunks (evita stack overflow em arquivos grandes)
+        const bytes = new Uint8Array(buf);
+        let binary = "";
+        const chunk = 0x8000;
+        for (let i = 0; i < bytes.length; i += chunk) {
+          binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunk)) as any);
+        }
+        const dataBase64 = btoa(binary);
+        const res = await uploadMedia({
+          data: {
+            filename: file.name,
+            contentType: file.type || "application/octet-stream",
+            dataBase64,
+          },
+        });
+        next.push(res.publicUrl);
       }
       imagesHydrated.current = true;
       setImages(next);
-      toast.success(`${files.length} arquivo(s) enviado(s). Lembre de salvar.`);
+      toast.success(`Mídia enviada. Clique em "Salvar e publicar" para gravar.`);
     } catch (err: any) {
       toast.error(err?.message || "Erro no upload");
     } finally {
