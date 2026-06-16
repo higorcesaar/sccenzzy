@@ -678,6 +678,48 @@ export type Database = {
         }
         Relationships: []
       }
+      scz_hero_carousel: {
+        Row: {
+          active: boolean
+          button_link: string | null
+          button_text: string | null
+          created_at: string
+          id: string
+          image_url: string | null
+          position: number
+          subtitle: string | null
+          title: string
+          updated_at: string
+          video_url: string | null
+        }
+        Insert: {
+          active?: boolean
+          button_link?: string | null
+          button_text?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          position?: number
+          subtitle?: string | null
+          title: string
+          updated_at?: string
+          video_url?: string | null
+        }
+        Update: {
+          active?: boolean
+          button_link?: string | null
+          button_text?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          position?: number
+          subtitle?: string | null
+          title?: string
+          updated_at?: string
+          video_url?: string | null
+        }
+        Relationships: []
+      }
       scz_order_items: {
         Row: {
           created_at: string

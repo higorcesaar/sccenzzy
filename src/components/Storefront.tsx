@@ -7,6 +7,7 @@ import ProductCard from './ProductCard';
 import CartDrawer from './CartDrawer';
 import CheckoutModal from './CheckoutModal';
 import CampaignBanner from './CampaignBanner';
+import HeroCarousel from './HeroCarousel';
 import BentoCampanha from './BentoCampanha';
 import StoreFinder from './StoreFinder';
 import ProductDetailModal from './ProductDetailModal';
@@ -175,46 +176,8 @@ export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidad
               </div>
 
               <div className="lg:col-span-6 flex justify-center items-center w-full py-8 lg:py-0">
-                <div className="grid grid-cols-2 gap-4 sm:gap-5 w-full max-w-lg">
-                  {/* Tênis */}
-                  <div onClick={() => tenisList[0] && handleProductSelect(tenisList[0])} className="relative aspect-[4/5] rounded-3xl overflow-hidden shadow-xl bg-white group transform hover:-translate-y-1 transition-all duration-500 cursor-pointer text-left">
-                    <img src={tenisList[0]?.images[0] || "https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?auto=format&fit=crop&q=80&w=500"} alt="Tênis" className="w-full h-full object-cover opacity-95 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700" referrerPolicy="no-referrer" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-stone-900/80 via-stone-900/20 to-transparent" />
-                    <div className="absolute bottom-5 left-4 right-4 text-white">
-                      <span className="text-[9px] uppercase tracking-widest text-gold-400 font-bold block mb-1">Coleção</span>
-                      <h3 className="font-serif text-base sm:text-lg font-bold uppercase tracking-wide">Tênis</h3>
-                    </div>
-                  </div>
-
-                  {/* Bolsas */}
-                  <div onClick={() => bolsasList[0] && handleProductSelect(bolsasList[0])} className="relative aspect-[4/5] rounded-3xl overflow-hidden shadow-xl bg-white group transform translate-y-8 hover:translate-y-7 transition-all duration-500 cursor-pointer text-left">
-                    <img src={bolsasList[0]?.images[0] || "https://images.unsplash.com/photo-1584916201218-f4242ceb4809?auto=format&fit=crop&q=80&w=500"} alt="Bolsas" className="w-full h-full object-cover opacity-95 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700" referrerPolicy="no-referrer" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-stone-900/80 via-stone-900/20 to-transparent" />
-                    <div className="absolute bottom-5 left-4 right-4 text-white">
-                      <span className="text-[9px] uppercase tracking-widest text-gold-400 font-bold block mb-1">Elegância</span>
-                      <h3 className="font-serif text-base sm:text-lg font-bold uppercase tracking-wide">Bolsas</h3>
-                    </div>
-                  </div>
-
-                  {/* Saltos */}
-                  <div onClick={() => saltosList[0] && handleProductSelect(saltosList[0])} className="relative aspect-[4/5] rounded-3xl overflow-hidden shadow-xl bg-white group transform hover:-translate-y-1 transition-all duration-500 cursor-pointer text-left">
-                    <img src={saltosList[0]?.images[0] || "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?auto=format&fit=crop&q=80&w=500"} alt="Saltos" className="w-full h-full object-cover opacity-95 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700" referrerPolicy="no-referrer" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-stone-900/80 via-stone-900/20 to-transparent" />
-                    <div className="absolute bottom-5 left-4 right-4 text-white">
-                      <span className="text-[9px] uppercase tracking-widest text-gold-400 font-bold block mb-1">Sofisticação</span>
-                      <h3 className="font-serif text-base sm:text-lg font-bold uppercase tracking-wide">Saltos</h3>
-                    </div>
-                  </div>
-
-                  {/* Cintos */}
-                  <div onClick={() => cintosList[0] && handleProductSelect(cintosList[0])} className="relative aspect-[4/5] rounded-3xl overflow-hidden shadow-xl bg-white group transform translate-y-8 hover:translate-y-7 transition-all duration-500 cursor-pointer text-left">
-                    <img src={cintosList[0]?.images[0] || "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?auto=format&fit=crop&q=80&w=500"} alt="Cintos" className="w-full h-full object-cover opacity-95 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700" referrerPolicy="no-referrer" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-stone-900/80 via-stone-900/20 to-transparent" />
-                    <div className="absolute bottom-5 left-4 right-4 text-white">
-                      <span className="text-[9px] uppercase tracking-widest text-gold-400 font-bold block mb-1">Acessórios</span>
-                      <h3 className="font-serif text-base sm:text-lg font-bold uppercase tracking-wide">Cintos</h3>
-                    </div>
-                  </div>
+                <div className="w-full max-w-lg">
+                  <HeroCarousel />
                 </div>
               </div>
             </div>

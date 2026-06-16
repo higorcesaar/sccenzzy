@@ -33,6 +33,7 @@ import { Route as AdminProdutosNovoRouteImport } from './routes/admin.produtos.n
 import { Route as AdminProdutosIdRouteImport } from './routes/admin.produtos.$id'
 import { Route as AdminPedidosIdRouteImport } from './routes/admin.pedidos.$id'
 import { Route as AdminPaginasIdRouteImport } from './routes/admin.paginas.$id'
+import { Route as AdminMarketingHeroRouteImport } from './routes/admin.marketing.hero'
 import { Route as AdminClientesIdRouteImport } from './routes/admin.clientes.$id'
 import { Route as ApiPublicR2SplatRouteImport } from './routes/api/public/r2.$'
 
@@ -156,6 +157,11 @@ const AdminPaginasIdRoute = AdminPaginasIdRouteImport.update({
   path: '/paginas/$id',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminMarketingHeroRoute = AdminMarketingHeroRouteImport.update({
+  id: '/marketing/hero',
+  path: '/marketing/hero',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminClientesIdRoute = AdminClientesIdRouteImport.update({
   id: '/clientes/$id',
   path: '/clientes/$id',
@@ -181,6 +187,7 @@ export interface FileRoutesByFullPath {
   '/p/$slug': typeof PSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/clientes/$id': typeof AdminClientesIdRoute
+  '/admin/marketing/hero': typeof AdminMarketingHeroRoute
   '/admin/paginas/$id': typeof AdminPaginasIdRoute
   '/admin/pedidos/$id': typeof AdminPedidosIdRoute
   '/admin/produtos/$id': typeof AdminProdutosIdRoute
@@ -208,6 +215,7 @@ export interface FileRoutesByTo {
   '/p/$slug': typeof PSlugRoute
   '/admin': typeof AdminIndexRoute
   '/admin/clientes/$id': typeof AdminClientesIdRoute
+  '/admin/marketing/hero': typeof AdminMarketingHeroRoute
   '/admin/paginas/$id': typeof AdminPaginasIdRoute
   '/admin/pedidos/$id': typeof AdminPedidosIdRoute
   '/admin/produtos/$id': typeof AdminProdutosIdRoute
@@ -237,6 +245,7 @@ export interface FileRoutesById {
   '/p/$slug': typeof PSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/clientes/$id': typeof AdminClientesIdRoute
+  '/admin/marketing/hero': typeof AdminMarketingHeroRoute
   '/admin/paginas/$id': typeof AdminPaginasIdRoute
   '/admin/pedidos/$id': typeof AdminPedidosIdRoute
   '/admin/produtos/$id': typeof AdminProdutosIdRoute
@@ -267,6 +276,7 @@ export interface FileRouteTypes {
     | '/p/$slug'
     | '/admin/'
     | '/admin/clientes/$id'
+    | '/admin/marketing/hero'
     | '/admin/paginas/$id'
     | '/admin/pedidos/$id'
     | '/admin/produtos/$id'
@@ -294,6 +304,7 @@ export interface FileRouteTypes {
     | '/p/$slug'
     | '/admin'
     | '/admin/clientes/$id'
+    | '/admin/marketing/hero'
     | '/admin/paginas/$id'
     | '/admin/pedidos/$id'
     | '/admin/produtos/$id'
@@ -322,6 +333,7 @@ export interface FileRouteTypes {
     | '/p/$slug'
     | '/admin/'
     | '/admin/clientes/$id'
+    | '/admin/marketing/hero'
     | '/admin/paginas/$id'
     | '/admin/pedidos/$id'
     | '/admin/produtos/$id'
@@ -520,6 +532,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminPaginasIdRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/marketing/hero': {
+      id: '/admin/marketing/hero'
+      path: '/marketing/hero'
+      fullPath: '/admin/marketing/hero'
+      preLoaderRoute: typeof AdminMarketingHeroRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/clientes/$id': {
       id: '/admin/clientes/$id'
       path: '/clientes/$id'
@@ -542,6 +561,7 @@ interface AdminRouteChildren {
   AdminEstoqueRoute: typeof AdminEstoqueRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminClientesIdRoute: typeof AdminClientesIdRoute
+  AdminMarketingHeroRoute: typeof AdminMarketingHeroRoute
   AdminPaginasIdRoute: typeof AdminPaginasIdRoute
   AdminPedidosIdRoute: typeof AdminPedidosIdRoute
   AdminProdutosIdRoute: typeof AdminProdutosIdRoute
@@ -561,6 +581,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminEstoqueRoute: AdminEstoqueRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminClientesIdRoute: AdminClientesIdRoute,
+  AdminMarketingHeroRoute: AdminMarketingHeroRoute,
   AdminPaginasIdRoute: AdminPaginasIdRoute,
   AdminPedidosIdRoute: AdminPedidosIdRoute,
   AdminProdutosIdRoute: AdminProdutosIdRoute,

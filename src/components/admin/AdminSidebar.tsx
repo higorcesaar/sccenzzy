@@ -12,6 +12,7 @@ import {
   LogOut,
   FolderTree,
   Sparkles,
+  Megaphone,
 } from "lucide-react";
 import {
   Sidebar,
@@ -53,6 +54,12 @@ const groups: { label: string; items: Item[] }[] = [
       { title: "Páginas", url: "/admin/paginas", icon: FileText },
       { title: "Banners", url: "/admin/banners", icon: ImageIcon },
       { title: "Construtor", url: "/admin/editor", icon: Wand2 },
+    ],
+  },
+  {
+    label: "Marketing",
+    items: [
+      { title: "Hero Carousel", url: "/admin/marketing/hero", icon: Megaphone },
     ],
   },
   { label: "Sistema", items: [{ title: "Configurações", url: "/admin/configuracoes", icon: Settings }] },
