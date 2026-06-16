@@ -226,10 +226,10 @@ export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidad
             <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-mono text-stone-500 uppercase tracking-widest">
               <div className="flex items-center gap-2">
                 <span className="h-2 w-2 bg-emerald-600 rounded-full animate-ping" />
-                <span>● 10% OFF VOUCHER ATIVO: <strong className="text-neutral-900 font-bold font-display">SCENZZY10</strong></span>
+                <span>Frete grátis em compras acima de R$ 500</span>
               </div>
               <div className="h-px w-8 bg-stone-300 hidden md:block" />
-              <span>🎁 Brinde exclusivo na compra de qualquer calçado em couro legítimo</span>
+              <span>Entregas para todo o Brasil</span>
               <div className="h-px w-8 bg-stone-300 hidden md:block" />
               <a href="https://www.instagram.com/scenzzy/" target="_blank" rel="noreferrer" className="hover:text-gold-500 flex items-center gap-1">
                 <Instagram className="h-4 w-4" /> INSTAGRAM @SCENZZY
