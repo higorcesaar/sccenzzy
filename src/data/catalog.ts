@@ -166,9 +166,9 @@ export const COUPONS: { [key: string]: number } = {
 export const STORES_PICKUP = [
   {
     id: 'st-01',
-    name: 'Scenzzy Boutique Jardins',
-    address: 'Alameda Lorena, 1420 - Jardins, São Paulo - SP',
-    cep: '01424-001',
+    name: 'Scenzzy Boutique Campina Grande',
+    address: 'Av. Almirante Barroso, 1980 Loja 08 CCruzeiro, Campina Grande - PB',
+    cep: '58415-670',
     distance: '1.2 km de você'
   },
   {

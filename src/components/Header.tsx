@@ -31,7 +31,7 @@ export default function Header({ cartCount, onCartClick, onSearch, products, onP
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const announcements = [
-    "🎁 Presente especial Scenzzy: Ganhe 10% OFF na primeira compra com cupom: SCENZZY10",
+    "✨ Bem-vinda à Scenzzy — Curadoria premium de calçados e bolsas",
     "💫 Siga nosso Instagram oficial e conheça as novidades da coleção @scenzzy"
   ];
 

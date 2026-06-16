@@ -336,7 +336,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, subtotal, di
                         type="text"
                         value={street}
                         onChange={(e) => setStreet(e.target.value)}
-                        placeholder="Alameda Lorena"
+                        placeholder="Av. Almirante Barroso"
                         className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-xs focus:outline-none"
                       />
                       {errors.street && <p className="text-[10px] text-red-500 font-medium">{errors.street}</p>}
