@@ -136,53 +136,11 @@ export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidad
     switch (sectionId) {
       case 'hero':
         return (
-          <section key="hero" className="relative overflow-hidden bg-[#F7F5F0] text-neutral-900 min-h-[85vh] flex items-center justify-center py-16 px-4" id="boutique-hero">
-            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 h-[500px] w-[500px] rounded-full bg-gold-200/30 filter blur-[140px] pointer-events-none select-none" />
-            <div className="absolute bottom-10 right-10 h-[300px] w-[300px] rounded-full bg-white/50 filter blur-[100px] pointer-events-none select-none animate-pulse" />
-
-            <div className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-12 items-center relative z-10">
-              <div className="lg:col-span-6 space-y-6 text-center lg:text-left">
-                <div className="inline-flex items-center gap-2 bg-white border border-stone-200 backdrop-blur-md px-3.5 py-1.5 rounded-full text-gold-500 text-[10px] uppercase font-bold tracking-widest leading-none shadow-sm">
-                  <Sparkles className="h-3 w-3 animate-spin text-gold-500" /> Essências de alta elegância & estilo
-                </div>
-
-                <h1 className="font-serif text-4xl sm:text-5xl lg:text-7xl font-extrabold text-neutral-900 leading-tight uppercase tracking-tight">
-                  SCENZZY <b className="text-gold-500">SHOES</b>
-                </h1>
-
-                <p className="text-sm sm:text-base text-stone-600 leading-relaxed max-w-xl mx-auto lg:mx-0 font-sans font-light">
-                  Explore nossa boutique exclusiva de sapatos selecionados e bolsas sofisticadas. Projetados meticulosamente para realçar o conforto, sofisticação e estilo minimalista moderno.
-                </p>
-
-                <div className="pt-4 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
-                  <Link to="/sapatos" className="w-full sm:w-auto bg-neutral-900 text-white border border-neutral-900 hover:bg-gold-500 hover:border-gold-500 px-8 py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all duration-300 shadow-md hover:shadow-lg focus:outline-none flex items-center justify-center gap-2">
-                    Comprar Tênis <ArrowRight className="h-4 w-4" />
-                  </Link>
-                  <Link to="/bolsas" className="w-full sm:w-auto bg-white text-neutral-900 border border-stone-300 hover:border-neutral-900 px-8 py-4 rounded-xl text-xs font-semibold uppercase tracking-widest transition-all duration-300 focus:outline-none flex items-center justify-center">
-                    Ver Bolsas
-                  </Link>
-                </div>
-
-                <div className="grid grid-cols-2 gap-6 pt-10 border-t border-stone-200 max-w-sm mx-auto lg:mx-0">
-                  <div>
-                    <span className="font-serif font-black text-2xl text-gold-500 block">Alta</span>
-                    <span className="text-[10px] text-stone-500 uppercase tracking-widest font-bold">Qualidade</span>
-                  </div>
-                  <div className="border-l border-stone-200 pl-6">
-                    <span className="font-serif font-black text-2xl text-gold-500 block">100%</span>
-                    <span className="text-[10px] text-stone-500 uppercase tracking-widest font-bold">Couro Legítimo</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="lg:col-span-6 flex justify-center items-center w-full py-8 lg:py-0">
-                <div className="w-full max-w-lg">
-                  <HeroCarousel />
-                </div>
-              </div>
-            </div>
+          <section key="hero" className="relative w-full bg-black" id="boutique-hero">
+            <HeroCarousel />
           </section>
         );
+
       case 'offers':
         return (
           <section key="offers" className="bg-white py-6 border-b border-stone-200">
