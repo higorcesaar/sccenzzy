@@ -68,6 +68,35 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, subtotal, di
     }
   }, [step, paymentOption]);
 
+  // Cotar frete sempre que CEP estiver completo e modo Correios estiver ativo
+  const totalQty = cartItems.reduce((acc, it) => acc + it.quantity, 0) || 1;
+  useEffect(() => {
+    const cepDigits = cep.replace(/\D/g, '');
+    if (deliveryOption !== 'correios' || cepDigits.length !== 8) {
+      return;
+    }
+    let cancelled = false;
+    setFreteLoading(true);
+    setFreteErro(null);
+    cotar({ data: { cepDestino: cepDigits, quantidade: totalQty } })
+      .then((res) => {
+        if (cancelled) return;
+        if (res.ok) {
+          setFreteQuotes(res.quotes);
+          const firstValid = res.quotes.find((q) => !q.erro && q.preco > 0);
+          if (firstValid) setSelectedFreteCodigo(firstValid.codigo);
+        } else {
+          setFreteErro(res.error || 'Não foi possível calcular o frete.');
+          setFreteQuotes([]);
+        }
+      })
+      .catch((e) => !cancelled && setFreteErro(e?.message || 'Erro ao calcular frete'))
+      .finally(() => !cancelled && setFreteLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [cep, deliveryOption, totalQty, cotar]);
+
   if (!isOpen) return null;
 
   const handleCEPChange = (e: React.ChangeEvent<HTMLInputElement>) => {
