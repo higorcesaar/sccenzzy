@@ -152,6 +152,9 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, subtotal, di
       if (neighborhood.trim() === '') newErrors.neighborhood = 'Bairro obrigatório';
       if (city.trim() === '') newErrors.city = 'Cidade obrigatória';
       if (state.trim() === '') newErrors.state = 'Estado obrigatório';
+      if (!selectedFreteCodigo || !selectedQuote || selectedQuote.preco <= 0) {
+        newErrors.frete = 'Selecione uma opção de frete';
+      }
     }
 
     setErrors(newErrors);
