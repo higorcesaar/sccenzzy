@@ -289,41 +289,80 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, subtotal, di
               {/* Delivery method selection */}
               <div>
                 <span className="text-[10px] uppercase tracking-widest text-stone-400 font-bold block mb-3">Método de Envio</span>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div
-                    onClick={() => setDeliveryOption('standard')}
-                    className={`p-4 rounded-xl border border-stone-200 cursor-pointer transition-all ${
-                      deliveryOption === 'standard' ? 'bg-gold-50/50 border-gold-300 ring-1 ring-gold-300' : 'bg-white hover:bg-stone-50'
+                    onClick={() => setDeliveryOption('correios')}
+                    className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                      deliveryOption === 'correios' ? 'bg-gold-50/50 border-gold-300 ring-1 ring-gold-300' : 'bg-white border-stone-200 hover:bg-stone-50'
                     }`}
                   >
-                    <p className="text-xs font-bold text-neutral-900">Entrega Padrão</p>
-                    <p className="text-[10px] text-stone-400 mt-1">6 a 8 dias úteis</p>
-                    <p className="text-[11px] text-emerald-600 font-bold tracking-widest uppercase mt-2">Grátis</p>
-                  </div>
-
-                  <div
-                    onClick={() => setDeliveryOption('express')}
-                    className={`p-4 rounded-xl border border-stone-200 cursor-pointer transition-all ${
-                      deliveryOption === 'express' ? 'bg-gold-50/50 border-gold-300 ring-1 ring-gold-300' : 'bg-white hover:bg-stone-50'
-                    }`}
-                  >
-                    <p className="text-xs font-bold text-neutral-900">Envio Expresso</p>
-                    <p className="text-[10px] text-stone-400 mt-1">2 a 3 dias úteis</p>
-                    <p className="text-[11px] text-neutral-800 font-bold mt-2">R$ 25,00</p>
+                    <div className="flex items-center gap-2">
+                      <Truck className="h-4 w-4 text-stone-700" />
+                      <p className="text-xs font-bold text-neutral-900">Envio pelos Correios</p>
+                    </div>
+                    <p className="text-[10px] text-stone-400 mt-1">Calcule digitando o CEP abaixo</p>
                   </div>
 
                   <div
                     onClick={() => setDeliveryOption('store_pickup')}
-                    className={`p-4 rounded-xl border border-stone-200 cursor-pointer transition-all ${
-                      deliveryOption === 'store_pickup' ? 'bg-gold-50/50 border-gold-300 ring-1 ring-gold-300' : 'bg-white hover:bg-stone-50'
+                    className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                      deliveryOption === 'store_pickup' ? 'bg-gold-50/50 border-gold-300 ring-1 ring-gold-300' : 'bg-white border-stone-200 hover:bg-stone-50'
                     }`}
                   >
-                    <p className="text-xs font-bold text-neutral-900">Retirada Scenzzy</p>
-                    <p className="text-[10px] text-stone-400 mt-1">Disponível em 1 hora!</p>
+                    <p className="text-xs font-bold text-neutral-900">Retirada na Loja</p>
+                    <p className="text-[10px] text-stone-400 mt-1">Av. Almirante Barroso, 1980 - Loja 08</p>
                     <p className="text-[11px] text-emerald-600 font-bold tracking-widest uppercase mt-2">Grátis</p>
                   </div>
                 </div>
+
+                {/* Cotações dos Correios */}
+                {deliveryOption === 'correios' && (
+                  <div className="mt-3 space-y-2">
+                    {freteLoading && (
+                      <div className="flex items-center gap-2 text-[11px] text-stone-500">
+                        <Loader2 className="h-3 w-3 animate-spin" /> Calculando frete...
+                      </div>
+                    )}
+                    {freteErro && !freteLoading && (
+                      <p className="text-[11px] text-red-600">{freteErro}</p>
+                    )}
+                    {!freteLoading && freteQuotes.length > 0 && (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        {freteQuotes.map((q) => {
+                          const disabled = !!q.erro || q.preco === 0;
+                          const isSel = selectedFreteCodigo === q.codigo;
+                          return (
+                            <button
+                              key={q.codigo}
+                              type="button"
+                              disabled={disabled}
+                              onClick={() => setSelectedFreteCodigo(q.codigo)}
+                              className={`text-left p-3 rounded-xl border transition-all ${
+                                disabled
+                                  ? 'opacity-40 cursor-not-allowed border-stone-200 bg-stone-50'
+                                  : isSel
+                                  ? 'bg-gold-50/50 border-gold-300 ring-1 ring-gold-300'
+                                  : 'bg-white border-stone-200 hover:bg-stone-50'
+                              }`}
+                            >
+                              <p className="text-xs font-bold text-neutral-900">{q.nome}</p>
+                              <p className="text-[10px] text-stone-400 mt-1">
+                                {q.erro ? q.erro : `${q.prazoDias} dia(s) úteis`}
+                              </p>
+                              {!q.erro && (
+                                <p className="text-[11px] font-bold mt-2">
+                                  R$ {q.preco.toFixed(2).replace('.', ',')}
+                                </p>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
+
 
               {/* Address inputs for Deliveries */}
               {deliveryOption !== 'store_pickup' ? (
