@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, ArrowLeft, CreditCard, QrCode, ClipboardList, CheckCircle2, Loader2, Sparkles, Send, MapPin, Receipt, Check, Copy, ArrowRight } from 'lucide-react';
+import { X, ArrowLeft, CreditCard, QrCode, ClipboardList, CheckCircle2, Loader2, Sparkles, Send, MapPin, Receipt, Check, Copy, ArrowRight, Truck } from 'lucide-react';
+import { useServerFn } from '@tanstack/react-start';
 import { CartItem, ShippingAddress, PaymentMethod, CheckoutState } from '../types';
 import { STORES_PICKUP } from '../data/catalog';
+import { cotarFrete } from '../lib/correios.functions';
+
+type FreteQuote = { codigo: string; nome: string; descricao: string; preco: number; prazoDias: number; erro?: string };
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -16,8 +20,13 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, subtotal, di
   const [step, setStep] = useState<'info' | 'payment' | 'processing' | 'done'>('info');
   const [copiedText, setCopiedText] = useState(false);
   const [paymentOption, setPaymentOption] = useState<PaymentMethod>('pix');
-  const [deliveryOption, setDeliveryOption] = useState<'standard' | 'express' | 'store_pickup'>('standard');
+  const [deliveryOption, setDeliveryOption] = useState<'correios' | 'store_pickup'>('correios');
   const [selectedStoreId, setSelectedStoreId] = useState(STORES_PICKUP[0].id);
+  const [freteQuotes, setFreteQuotes] = useState<FreteQuote[]>([]);
+  const [freteLoading, setFreteLoading] = useState(false);
+  const [freteErro, setFreteErro] = useState<string | null>(null);
+  const [selectedFreteCodigo, setSelectedFreteCodigo] = useState<string | null>(null);
+  const cotar = useServerFn(cotarFrete);
 
   // Card Flip Focus Simulator
   const [cardFlip, setCardFlip] = useState(false);
@@ -58,6 +67,35 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, subtotal, di
       return () => clearInterval(timer);
     }
   }, [step, paymentOption]);
+
+  // Cotar frete sempre que CEP estiver completo e modo Correios estiver ativo
+  const totalQty = cartItems.reduce((acc, it) => acc + it.quantity, 0) || 1;
+  useEffect(() => {
+    const cepDigits = cep.replace(/\D/g, '');
+    if (deliveryOption !== 'correios' || cepDigits.length !== 8) {
+      return;
+    }
+    let cancelled = false;
+    setFreteLoading(true);
+    setFreteErro(null);
+    cotar({ data: { cepDestino: cepDigits, quantidade: totalQty } })
+      .then((res) => {
+        if (cancelled) return;
+        if (res.ok) {
+          setFreteQuotes(res.quotes);
+          const firstValid = res.quotes.find((q) => !q.erro && q.preco > 0);
+          if (firstValid) setSelectedFreteCodigo(firstValid.codigo);
+        } else {
+          setFreteErro(res.error || 'Não foi possível calcular o frete.');
+          setFreteQuotes([]);
+        }
+      })
+      .catch((e) => !cancelled && setFreteErro(e?.message || 'Erro ao calcular frete'))
+      .finally(() => !cancelled && setFreteLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [cep, deliveryOption, totalQty, cotar]);
 
   if (!isOpen) return null;
 
@@ -114,6 +152,9 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, subtotal, di
       if (neighborhood.trim() === '') newErrors.neighborhood = 'Bairro obrigatório';
       if (city.trim() === '') newErrors.city = 'Cidade obrigatória';
       if (state.trim() === '') newErrors.state = 'Estado obrigatório';
+      if (!selectedFreteCodigo || !selectedQuote || selectedQuote.preco <= 0) {
+        newErrors.frete = 'Selecione uma opção de frete';
+      }
     }
 
     setErrors(newErrors);
@@ -146,8 +187,12 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, subtotal, di
     }, 3000);
   };
 
+  const selectedQuote = freteQuotes.find((q) => q.codigo === selectedFreteCodigo) ?? null;
+  const totalShipping =
+    deliveryOption === 'store_pickup' ? 0 : selectedQuote?.preco ?? 0;
+
   const handlePixCopy = () => {
-    const pixCode = `00020101021226870014br.gov.bcb.pix2565pix.scenzzychao.com.br/qr/v2/${generatedOrderId.current}5204000053039865405${Math.round(subtotal - discount + (deliveryOption === 'express' ? 25 : 0))}.005802BR5908SCENZZY6009SAOPAULO62290525SZORDER${generatedOrderId.current}`;
+    const pixCode = `00020101021226870014br.gov.bcb.pix2565pix.scenzzychao.com.br/qr/v2/${generatedOrderId.current}5204000053039865405${Math.round(subtotal - discount + totalShipping)}.005802BR5908SCENZZY6009SAOPAULO62290525SZORDER${generatedOrderId.current}`;
     navigator.clipboard.writeText(pixCode);
     setCopiedText(true);
     setTimeout(() => setCopiedText(false), 2000);
@@ -161,12 +206,11 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, subtotal, di
 
   const estimatedDeliveryDate = () => {
     const date = new Date();
-    const daysToAdd = deliveryOption === 'express' ? 2 : 6;
+    const daysToAdd = deliveryOption === 'store_pickup' ? 0 : selectedQuote?.prazoDias ?? 6;
     date.setDate(date.getDate() + daysToAdd);
     return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' });
   };
 
-  const totalShipping = deliveryOption === 'express' ? 25.00 : 0.00;
   const finalTotalAmount = subtotal - discount + totalShipping;
 
   // Credit Card Brand Predictor
@@ -277,41 +321,80 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, subtotal, di
               {/* Delivery method selection */}
               <div>
                 <span className="text-[10px] uppercase tracking-widest text-stone-400 font-bold block mb-3">Método de Envio</span>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div
-                    onClick={() => setDeliveryOption('standard')}
-                    className={`p-4 rounded-xl border border-stone-200 cursor-pointer transition-all ${
-                      deliveryOption === 'standard' ? 'bg-gold-50/50 border-gold-300 ring-1 ring-gold-300' : 'bg-white hover:bg-stone-50'
+                    onClick={() => setDeliveryOption('correios')}
+                    className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                      deliveryOption === 'correios' ? 'bg-gold-50/50 border-gold-300 ring-1 ring-gold-300' : 'bg-white border-stone-200 hover:bg-stone-50'
                     }`}
                   >
-                    <p className="text-xs font-bold text-neutral-900">Entrega Padrão</p>
-                    <p className="text-[10px] text-stone-400 mt-1">6 a 8 dias úteis</p>
-                    <p className="text-[11px] text-emerald-600 font-bold tracking-widest uppercase mt-2">Grátis</p>
-                  </div>
-
-                  <div
-                    onClick={() => setDeliveryOption('express')}
-                    className={`p-4 rounded-xl border border-stone-200 cursor-pointer transition-all ${
-                      deliveryOption === 'express' ? 'bg-gold-50/50 border-gold-300 ring-1 ring-gold-300' : 'bg-white hover:bg-stone-50'
-                    }`}
-                  >
-                    <p className="text-xs font-bold text-neutral-900">Envio Expresso</p>
-                    <p className="text-[10px] text-stone-400 mt-1">2 a 3 dias úteis</p>
-                    <p className="text-[11px] text-neutral-800 font-bold mt-2">R$ 25,00</p>
+                    <div className="flex items-center gap-2">
+                      <Truck className="h-4 w-4 text-stone-700" />
+                      <p className="text-xs font-bold text-neutral-900">Envio pelos Correios</p>
+                    </div>
+                    <p className="text-[10px] text-stone-400 mt-1">Calcule digitando o CEP abaixo</p>
                   </div>
 
                   <div
                     onClick={() => setDeliveryOption('store_pickup')}
-                    className={`p-4 rounded-xl border border-stone-200 cursor-pointer transition-all ${
-                      deliveryOption === 'store_pickup' ? 'bg-gold-50/50 border-gold-300 ring-1 ring-gold-300' : 'bg-white hover:bg-stone-50'
+                    className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                      deliveryOption === 'store_pickup' ? 'bg-gold-50/50 border-gold-300 ring-1 ring-gold-300' : 'bg-white border-stone-200 hover:bg-stone-50'
                     }`}
                   >
-                    <p className="text-xs font-bold text-neutral-900">Retirada Scenzzy</p>
-                    <p className="text-[10px] text-stone-400 mt-1">Disponível em 1 hora!</p>
+                    <p className="text-xs font-bold text-neutral-900">Retirada na Loja</p>
+                    <p className="text-[10px] text-stone-400 mt-1">Av. Almirante Barroso, 1980 - Loja 08</p>
                     <p className="text-[11px] text-emerald-600 font-bold tracking-widest uppercase mt-2">Grátis</p>
                   </div>
                 </div>
+
+                {/* Cotações dos Correios */}
+                {deliveryOption === 'correios' && (
+                  <div className="mt-3 space-y-2">
+                    {freteLoading && (
+                      <div className="flex items-center gap-2 text-[11px] text-stone-500">
+                        <Loader2 className="h-3 w-3 animate-spin" /> Calculando frete...
+                      </div>
+                    )}
+                    {freteErro && !freteLoading && (
+                      <p className="text-[11px] text-red-600">{freteErro}</p>
+                    )}
+                    {!freteLoading && freteQuotes.length > 0 && (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        {freteQuotes.map((q) => {
+                          const disabled = !!q.erro || q.preco === 0;
+                          const isSel = selectedFreteCodigo === q.codigo;
+                          return (
+                            <button
+                              key={q.codigo}
+                              type="button"
+                              disabled={disabled}
+                              onClick={() => setSelectedFreteCodigo(q.codigo)}
+                              className={`text-left p-3 rounded-xl border transition-all ${
+                                disabled
+                                  ? 'opacity-40 cursor-not-allowed border-stone-200 bg-stone-50'
+                                  : isSel
+                                  ? 'bg-gold-50/50 border-gold-300 ring-1 ring-gold-300'
+                                  : 'bg-white border-stone-200 hover:bg-stone-50'
+                              }`}
+                            >
+                              <p className="text-xs font-bold text-neutral-900">{q.nome}</p>
+                              <p className="text-[10px] text-stone-400 mt-1">
+                                {q.erro ? q.erro : `${q.prazoDias} dia(s) úteis`}
+                              </p>
+                              {!q.erro && (
+                                <p className="text-[11px] font-bold mt-2">
+                                  R$ {q.preco.toFixed(2).replace('.', ',')}
+                                </p>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
+
 
               {/* Address inputs for Deliveries */}
               {deliveryOption !== 'store_pickup' ? (
@@ -767,7 +850,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, subtotal, di
                   <div className="flex justify-between">
                     <span>Método de Entrega:</span>
                     <span className="font-semibold text-neutral-900">
-                      {deliveryOption === 'store_pickup' ? 'Retirada em Loja' : deliveryOption === 'express' ? 'Envio Expresso' : 'Envio Padrão'}
+                      {deliveryOption === 'store_pickup' ? 'Retirada em Loja' : selectedQuote ? `Correios - ${selectedQuote.nome}` : 'Correios'}
                     </span>
                   </div>
                   {deliveryOption === 'store_pickup' ? (
@@ -849,8 +932,8 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, subtotal, di
               </div>
             )}
             <div className="flex justify-between text-xs text-stone-500">
-              <span>Frete prioritário</span>
-              <span className="font-mono">{deliveryOption === 'express' ? 'R$ 25,00' : 'Grátis'}</span>
+              <span>Frete</span>
+              <span className="font-mono">{totalShipping > 0 ? totalShipping.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'Grátis'}</span>
             </div>
             <div className="flex justify-between items-baseline pt-3 border-t border-stone-150">
               <span className="text-sm font-semibold uppercase tracking-wider text-neutral-900">Total Faturado</span>
