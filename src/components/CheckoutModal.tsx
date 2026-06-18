@@ -155,8 +155,12 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, subtotal, di
     }, 3000);
   };
 
+  const selectedQuote = freteQuotes.find((q) => q.codigo === selectedFreteCodigo) ?? null;
+  const totalShipping =
+    deliveryOption === 'store_pickup' ? 0 : selectedQuote?.preco ?? 0;
+
   const handlePixCopy = () => {
-    const pixCode = `00020101021226870014br.gov.bcb.pix2565pix.scenzzychao.com.br/qr/v2/${generatedOrderId.current}5204000053039865405${Math.round(subtotal - discount + (deliveryOption === 'express' ? 25 : 0))}.005802BR5908SCENZZY6009SAOPAULO62290525SZORDER${generatedOrderId.current}`;
+    const pixCode = `00020101021226870014br.gov.bcb.pix2565pix.scenzzychao.com.br/qr/v2/${generatedOrderId.current}5204000053039865405${Math.round(subtotal - discount + totalShipping)}.005802BR5908SCENZZY6009SAOPAULO62290525SZORDER${generatedOrderId.current}`;
     navigator.clipboard.writeText(pixCode);
     setCopiedText(true);
     setTimeout(() => setCopiedText(false), 2000);
@@ -170,12 +174,11 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, subtotal, di
 
   const estimatedDeliveryDate = () => {
     const date = new Date();
-    const daysToAdd = deliveryOption === 'express' ? 2 : 6;
+    const daysToAdd = deliveryOption === 'store_pickup' ? 0 : selectedQuote?.prazoDias ?? 6;
     date.setDate(date.getDate() + daysToAdd);
     return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' });
   };
 
-  const totalShipping = deliveryOption === 'express' ? 25.00 : 0.00;
   const finalTotalAmount = subtotal - discount + totalShipping;
 
   // Credit Card Brand Predictor
