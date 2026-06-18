@@ -20,7 +20,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, subtotal, di
   const [step, setStep] = useState<'info' | 'payment' | 'processing' | 'done'>('info');
   const [copiedText, setCopiedText] = useState(false);
   const [paymentOption, setPaymentOption] = useState<PaymentMethod>('pix');
-  const [deliveryOption, setDeliveryOption] = useState<'standard' | 'express' | 'store_pickup'>('standard');
+  const [deliveryOption, setDeliveryOption] = useState<'correios' | 'store_pickup'>('correios');
   const [selectedStoreId, setSelectedStoreId] = useState(STORES_PICKUP[0].id);
   const [freteQuotes, setFreteQuotes] = useState<FreteQuote[]>([]);
   const [freteLoading, setFreteLoading] = useState(false);
