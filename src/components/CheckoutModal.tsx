@@ -818,7 +818,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, subtotal, di
                   <div className="flex justify-between">
                     <span>Método de Entrega:</span>
                     <span className="font-semibold text-neutral-900">
-                      {deliveryOption === 'store_pickup' ? 'Retirada em Loja' : deliveryOption === 'express' ? 'Envio Expresso' : 'Envio Padrão'}
+                      {deliveryOption === 'store_pickup' ? 'Retirada em Loja' : selectedQuote ? `Correios - ${selectedQuote.nome}` : 'Correios'}
                     </span>
                   </div>
                   {deliveryOption === 'store_pickup' ? (
