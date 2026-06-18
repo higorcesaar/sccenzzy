@@ -22,6 +22,11 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, subtotal, di
   const [paymentOption, setPaymentOption] = useState<PaymentMethod>('pix');
   const [deliveryOption, setDeliveryOption] = useState<'standard' | 'express' | 'store_pickup'>('standard');
   const [selectedStoreId, setSelectedStoreId] = useState(STORES_PICKUP[0].id);
+  const [freteQuotes, setFreteQuotes] = useState<FreteQuote[]>([]);
+  const [freteLoading, setFreteLoading] = useState(false);
+  const [freteErro, setFreteErro] = useState<string | null>(null);
+  const [selectedFreteCodigo, setSelectedFreteCodigo] = useState<string | null>(null);
+  const cotar = useServerFn(cotarFrete);
 
   // Card Flip Focus Simulator
   const [cardFlip, setCardFlip] = useState(false);
