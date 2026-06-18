@@ -900,8 +900,8 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, subtotal, di
               </div>
             )}
             <div className="flex justify-between text-xs text-stone-500">
-              <span>Frete prioritário</span>
-              <span className="font-mono">{deliveryOption === 'express' ? 'R$ 25,00' : 'Grátis'}</span>
+              <span>Frete</span>
+              <span className="font-mono">{totalShipping > 0 ? totalShipping.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'Grátis'}</span>
             </div>
             <div className="flex justify-between items-baseline pt-3 border-t border-stone-150">
               <span className="text-sm font-semibold uppercase tracking-wider text-neutral-900">Total Faturado</span>
