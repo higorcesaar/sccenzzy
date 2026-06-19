@@ -427,6 +427,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, subtotal, di
                         placeholder="01424-001"
                         className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-xs focus:outline-none"
                       />
+                      {cepLoading && <p className="text-[10px] text-stone-400 flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Buscando endereço…</p>}
                       {errors.cep && <p className="text-[10px] text-red-500 font-medium">{errors.cep}</p>}
                     </div>
 
