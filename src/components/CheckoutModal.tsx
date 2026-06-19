@@ -99,20 +99,37 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, subtotal, di
 
   if (!isOpen) return null;
 
-  const handleCEPChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '');
+  const [cepLoading, setCepLoading] = useState(false);
+  const handleCEPChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, '').slice(0, 8);
     let formatted = value;
     if (value.length > 5) {
       formatted = `${value.slice(0, 5)}-${value.slice(5, 8)}`;
     }
     setCep(formatted);
 
-    // Auto-fill mockup address if CEP is length 8
     if (value.length === 8) {
-      setStreet('Avenida Paulista');
-      setNeighborhood('Bela Vista');
-      setCity('São Paulo');
-      setState('SP');
+      setCepLoading(true);
+      setErrors((prev) => ({ ...prev, cep: '' }));
+      try {
+        const resp = await fetch(`https://viacep.com.br/ws/${value}/json/`);
+        const data = await resp.json();
+        if (data?.erro) {
+          setErrors((prev) => ({ ...prev, cep: 'CEP não encontrado' }));
+          setStreet(''); setNeighborhood(''); setCity(''); setState('');
+        } else {
+          setStreet(data.logradouro || '');
+          setNeighborhood(data.bairro || '');
+          setCity(data.localidade || '');
+          setState(data.uf || '');
+        }
+      } catch {
+        setErrors((prev) => ({ ...prev, cep: 'Falha ao consultar o CEP' }));
+      } finally {
+        setCepLoading(false);
+      }
+    } else {
+      setStreet(''); setNeighborhood(''); setCity(''); setState('');
     }
   };
 
@@ -410,6 +427,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, subtotal, di
                         placeholder="01424-001"
                         className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-xs focus:outline-none"
                       />
+                      {cepLoading && <p className="text-[10px] text-stone-400 flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Buscando endereço…</p>}
                       {errors.cep && <p className="text-[10px] text-red-500 font-medium">{errors.cep}</p>}
                     </div>
 
