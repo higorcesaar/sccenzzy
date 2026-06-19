@@ -108,7 +108,7 @@ export async function calcularFreteCorreios(
     largura: String(largura),
     altura: String(altura),
     nuContrato: CORREIOS_CONFIG.nuContrato,
-    nuDR: 0,
+    nuDR: 30,
     servicosAdicionais: [],
   }));
 
