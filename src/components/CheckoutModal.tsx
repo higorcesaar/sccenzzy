@@ -56,6 +56,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, subtotal, di
 
   // Errors panel
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [cepLoading, setCepLoading] = useState(false);
 
   const generatedOrderId = useRef(`SZ-${Math.floor(100000 + Math.random() * 900000)}`);
 
@@ -97,9 +98,10 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, subtotal, di
     };
   }, [cep, deliveryOption, totalQty, cotar]);
 
+  const selectedQuote = freteQuotes.find((q) => q.codigo === selectedFreteCodigo) ?? null;
+
   if (!isOpen) return null;
 
-  const [cepLoading, setCepLoading] = useState(false);
   const handleCEPChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, '').slice(0, 8);
     let formatted = value;
@@ -204,7 +206,6 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, subtotal, di
     }, 3000);
   };
 
-  const selectedQuote = freteQuotes.find((q) => q.codigo === selectedFreteCodigo) ?? null;
   const totalShipping =
     deliveryOption === 'store_pickup' ? 0 : selectedQuote?.preco ?? 0;
 
