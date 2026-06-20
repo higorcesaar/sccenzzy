@@ -206,7 +206,6 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, subtotal, di
     }, 3000);
   };
 
-  const selectedQuote = freteQuotes.find((q) => q.codigo === selectedFreteCodigo) ?? null;
   const totalShipping =
     deliveryOption === 'store_pickup' ? 0 : selectedQuote?.preco ?? 0;
 
