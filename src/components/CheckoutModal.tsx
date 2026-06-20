@@ -98,9 +98,10 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, subtotal, di
     };
   }, [cep, deliveryOption, totalQty, cotar]);
 
+  const selectedQuote = freteQuotes.find((q) => q.codigo === selectedFreteCodigo) ?? null;
+
   if (!isOpen) return null;
 
-  const [cepLoading, setCepLoading] = useState(false);
   const handleCEPChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, '').slice(0, 8);
     let formatted = value;
