@@ -56,6 +56,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, subtotal, di
 
   // Errors panel
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [cepLoading, setCepLoading] = useState(false);
 
   const generatedOrderId = useRef(`SZ-${Math.floor(100000 + Math.random() * 900000)}`);
 
