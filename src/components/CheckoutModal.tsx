@@ -278,274 +278,412 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, subtotal, di
             )}
           </div>
 
-          {/* Form Step: 1 - Contact and Address */}
-          {step === 'info' && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="font-serif text-xl font-bold text-neutral-950 mb-1">Identificação & Entrega</h3>
-                <p className="text-xs text-stone-400">Preencha seus dados para envio prioritário e geração da fatura.</p>
-              </div>
+          {/* Stepper visual */}
+          {step !== 'done' && step !== 'processing' && (() => {
+            const contatoOk =
+              email.includes('@') &&
+              name.trim().length >= 5 &&
+              cpf.replace(/\D/g, '').length === 11 &&
+              phone.trim().length >= 8;
+            const enderecoOk =
+              deliveryOption === 'store_pickup' ||
+              (cep.replace(/\D/g, '').length === 8 &&
+                street.trim() !== '' &&
+                number.trim() !== '' &&
+                neighborhood.trim() !== '' &&
+                city.trim() !== '' &&
+                state.trim() !== '');
+            const freteOk =
+              deliveryOption === 'store_pickup' ||
+              (!!selectedQuote && selectedQuote.preco > 0);
 
-              {/* Informações Básicas */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] uppercase tracking-widest text-stone-400 font-bold block">E-mail</label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="voce@exemplo.com"
-                    className="w-full bg-white border border-stone-200 focus:ring-1 focus:ring-gold-500 rounded-xl px-4 py-3 text-xs w-full focus:outline-none"
-                  />
-                  {errors.email && <p className="text-[10px] text-red-500 font-medium">{errors.email}</p>}
-                </div>
+            const stepsMeta = [
+              { id: 'endereco', label: 'Endereço', icon: MapPin, done: contatoOk && enderecoOk, active: step === 'info' },
+              { id: 'frete', label: 'Frete', icon: Truck, done: freteOk && contatoOk && enderecoOk, active: step === 'info' && (openSection === 'frete') },
+              { id: 'pagamento', label: 'Pagamento', icon: CreditCard, done: step === 'done', active: step === 'payment' },
+              { id: 'revisao', label: 'Revisão', icon: ClipboardList, done: step === 'done', active: step === 'done' },
+            ];
 
-                <div className="space-y-1">
-                  <label className="text-[10px] uppercase tracking-widest text-stone-400 font-bold block">Nome Completo</label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Nome Impresso ou Completo"
-                    className="w-full bg-white border border-stone-200 focus:ring-1 focus:ring-gold-500 rounded-xl px-4 py-3 text-xs w-full focus:outline-none"
-                  />
-                  {errors.name && <p className="text-[10px] text-red-500 font-medium">{errors.name}</p>}
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] uppercase tracking-widest text-stone-400 font-bold block">CPF para Nota Fiscal</label>
-                  <input
-                    type="text"
-                    value={cpf}
-                    onChange={(e) => setCpf(e.target.value.replace(/\D/g, '').slice(0, 11))}
-                    placeholder="999.999.999-99"
-                    className="w-full bg-white border border-stone-200 focus:ring-1 focus:ring-gold-500 rounded-xl px-4 py-3 text-xs w-full focus:outline-none font-mono"
-                  />
-                  {errors.cpf && <p className="text-[10px] text-red-500 font-medium">{errors.cpf}</p>}
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] uppercase tracking-widest text-stone-400 font-bold block">Telefone/Whatsapp</label>
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="(11) 99999-9999"
-                    className="w-full bg-white border border-stone-200 focus:ring-1 focus:ring-gold-500 rounded-xl px-4 py-3 text-xs w-full focus:outline-none"
-                  />
-                  {errors.phone && <p className="text-[10px] text-red-500 font-medium">{errors.phone}</p>}
-                </div>
-              </div>
-
-              {/* Delivery method selection */}
-              <div>
-                <span className="text-[10px] uppercase tracking-widest text-stone-400 font-bold block mb-3">Método de Envio</span>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div
-                    onClick={() => setDeliveryOption('correios')}
-                    className={`p-4 rounded-xl border cursor-pointer transition-all ${
-                      deliveryOption === 'correios' ? 'bg-gold-50/50 border-gold-300 ring-1 ring-gold-300' : 'bg-white border-stone-200 hover:bg-stone-50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Truck className="h-4 w-4 text-stone-700" />
-                      <p className="text-xs font-bold text-neutral-900">Envio pelos Correios</p>
-                    </div>
-                    <p className="text-[10px] text-stone-400 mt-1">Calcule digitando o CEP abaixo</p>
-                  </div>
-
-                  <div
-                    onClick={() => setDeliveryOption('store_pickup')}
-                    className={`p-4 rounded-xl border cursor-pointer transition-all ${
-                      deliveryOption === 'store_pickup' ? 'bg-gold-50/50 border-gold-300 ring-1 ring-gold-300' : 'bg-white border-stone-200 hover:bg-stone-50'
-                    }`}
-                  >
-                    <p className="text-xs font-bold text-neutral-900">Retirada na Loja</p>
-                    <p className="text-[10px] text-stone-400 mt-1">Av. Almirante Barroso, 1980 - Loja 08</p>
-                    <p className="text-[11px] text-emerald-600 font-bold tracking-widest uppercase mt-2">Grátis</p>
-                  </div>
-                </div>
-
-                {/* Cotações dos Correios */}
-                {deliveryOption === 'correios' && (
-                  <div className="mt-3 space-y-2">
-                    {freteLoading && (
-                      <div className="flex items-center gap-2 text-[11px] text-stone-500">
-                        <Loader2 className="h-3 w-3 animate-spin" /> Calculando frete...
+            return (
+              <div className="mb-6 flex items-center gap-2">
+                {stepsMeta.map((s, idx) => {
+                  const Icon = s.icon;
+                  return (
+                    <React.Fragment key={s.id}>
+                      <div className="flex flex-col items-center gap-1 min-w-0">
+                        <div
+                          className={`h-8 w-8 rounded-full flex items-center justify-center text-[10px] font-bold border transition-all shrink-0 ${
+                            s.done
+                              ? 'bg-emerald-500 border-emerald-500 text-white'
+                              : s.active
+                              ? 'bg-neutral-900 border-neutral-900 text-white'
+                              : 'bg-white border-stone-300 text-stone-400'
+                          }`}
+                        >
+                          {s.done ? <Check className="h-4 w-4" /> : <Icon className="h-3.5 w-3.5" />}
+                        </div>
+                        <span
+                          className={`text-[9px] uppercase tracking-widest font-bold ${
+                            s.active || s.done ? 'text-neutral-900' : 'text-stone-400'
+                          }`}
+                        >
+                          {s.label}
+                        </span>
                       </div>
-                    )}
-                    {freteErro && !freteLoading && (
-                      <p className="text-[11px] text-red-600">{freteErro}</p>
-                    )}
-                    {!freteLoading && freteQuotes.length > 0 && (
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                        {freteQuotes.map((q) => {
-                          const disabled = !!q.erro || q.preco === 0;
-                          const isSel = selectedFreteCodigo === q.codigo;
-                          return (
-                            <button
-                              key={q.codigo}
-                              type="button"
-                              disabled={disabled}
-                              onClick={() => setSelectedFreteCodigo(q.codigo)}
-                              className={`text-left p-3 rounded-xl border transition-all ${
-                                disabled
-                                  ? 'opacity-40 cursor-not-allowed border-stone-200 bg-stone-50'
-                                  : isSel
-                                  ? 'bg-gold-50/50 border-gold-300 ring-1 ring-gold-300'
-                                  : 'bg-white border-stone-200 hover:bg-stone-50'
+                      {idx < stepsMeta.length - 1 && (
+                        <div className={`flex-1 h-px ${stepsMeta[idx + 1].done || stepsMeta[idx + 1].active ? 'bg-neutral-900' : 'bg-stone-200'} mb-4`} />
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </div>
+            );
+          })()}
+
+          {/* Form Step: 1 - Contact + Address + Frete (collapsible sections) */}
+          {step === 'info' && (() => {
+            const contatoOk =
+              email.includes('@') &&
+              name.trim().length >= 5 &&
+              cpf.replace(/\D/g, '').length === 11 &&
+              phone.trim().length >= 8;
+            const enderecoOk =
+              deliveryOption === 'store_pickup' ||
+              (cep.replace(/\D/g, '').length === 8 &&
+                street.trim() !== '' &&
+                number.trim() !== '' &&
+                neighborhood.trim() !== '' &&
+                city.trim() !== '' &&
+                state.trim() !== '');
+            const freteOk =
+              deliveryOption === 'store_pickup' ||
+              (!!selectedQuote && selectedQuote.preco > 0);
+
+            const SectionHeader = ({
+              id,
+              icon: Icon,
+              title,
+              subtitle,
+              done,
+            }: {
+              id: 'contato' | 'endereco' | 'frete';
+              icon: React.ComponentType<{ className?: string }>;
+              title: string;
+              subtitle: string;
+              done: boolean;
+            }) => {
+              const isOpen = openSection === id;
+              return (
+                <button
+                  type="button"
+                  onClick={() => setOpenSection(isOpen ? id : id)}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    setOpenSection(isOpen ? id : id);
+                  }}
+                  onClickCapture={() => setOpenSection(isOpen ? id : id)}
+                  className="w-full flex items-center justify-between gap-3 p-4 focus:outline-none"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div
+                      className={`h-9 w-9 rounded-full flex items-center justify-center shrink-0 ${
+                        done ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-stone-100 text-stone-600 border border-stone-200'
+                      }`}
+                    >
+                      {done ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+                    </div>
+                    <div className="text-left min-w-0">
+                      <p className="text-xs font-bold uppercase tracking-widest text-neutral-900">{title}</p>
+                      <p className="text-[10px] text-stone-400 truncate">{subtitle}</p>
+                    </div>
+                  </div>
+                  <ChevronDown className={`h-4 w-4 text-stone-400 transition-transform shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
+                </button>
+              );
+            };
+
+            const toggle = (id: 'contato' | 'endereco' | 'frete') =>
+              setOpenSection((cur) => (cur === id ? cur : id));
+
+            return (
+              <div className="space-y-3">
+                <div>
+                  <h3 className="font-serif text-xl font-bold text-neutral-950 mb-1">Identificação & Entrega</h3>
+                  <p className="text-xs text-stone-400">Complete cada seção abaixo para liberar o pagamento.</p>
+                </div>
+
+                {/* CONTATO */}
+                <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden">
+                  <div onClick={() => toggle('contato')} className="cursor-pointer">
+                    <SectionHeader
+                      id="contato"
+                      icon={User}
+                      title="1. Contato"
+                      subtitle={contatoOk ? `${name} • ${email}` : 'Email, nome, CPF e telefone'}
+                      done={contatoOk}
+                    />
+                  </div>
+                  {openSection === 'contato' && (
+                    <div className="px-4 pb-5 pt-1 border-t border-stone-100">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[10px] uppercase tracking-widest text-stone-400 font-bold block">E-mail</label>
+                          <input
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="voce@exemplo.com"
+                            className="w-full bg-white border border-stone-200 focus:ring-1 focus:ring-gold-500 rounded-xl px-4 py-3 text-xs focus:outline-none"
+                          />
+                          {errors.email && <p className="text-[10px] text-red-500 font-medium">{errors.email}</p>}
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] uppercase tracking-widest text-stone-400 font-bold block">Nome Completo</label>
+                          <input
+                            type="text"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            placeholder="Nome Impresso ou Completo"
+                            className="w-full bg-white border border-stone-200 focus:ring-1 focus:ring-gold-500 rounded-xl px-4 py-3 text-xs focus:outline-none"
+                          />
+                          {errors.name && <p className="text-[10px] text-red-500 font-medium">{errors.name}</p>}
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] uppercase tracking-widest text-stone-400 font-bold block">CPF para Nota Fiscal</label>
+                          <input
+                            type="text"
+                            value={cpf}
+                            onChange={(e) => setCpf(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                            placeholder="999.999.999-99"
+                            className="w-full bg-white border border-stone-200 focus:ring-1 focus:ring-gold-500 rounded-xl px-4 py-3 text-xs focus:outline-none font-mono"
+                          />
+                          {errors.cpf && <p className="text-[10px] text-red-500 font-medium">{errors.cpf}</p>}
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] uppercase tracking-widest text-stone-400 font-bold block">Telefone/Whatsapp</label>
+                          <input
+                            type="tel"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            placeholder="(11) 99999-9999"
+                            className="w-full bg-white border border-stone-200 focus:ring-1 focus:ring-gold-500 rounded-xl px-4 py-3 text-xs focus:outline-none"
+                          />
+                          {errors.phone && <p className="text-[10px] text-red-500 font-medium">{errors.phone}</p>}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={!contatoOk}
+                        onClick={() => setOpenSection('endereco')}
+                        className="mt-4 w-full bg-neutral-900 disabled:bg-stone-300 disabled:cursor-not-allowed hover:bg-gold-500 text-stone-100 py-3 rounded-xl text-[11px] font-semibold uppercase tracking-widest transition-all flex items-center justify-center gap-1.5"
+                      >
+                        Continuar para Endereço <ArrowRight className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* ENDEREÇO */}
+                <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden">
+                  <div onClick={() => toggle('endereco')} className="cursor-pointer">
+                    <SectionHeader
+                      id="endereco"
+                      icon={MapPin}
+                      title="2. Endereço & Envio"
+                      subtitle={
+                        deliveryOption === 'store_pickup'
+                          ? 'Retirada em loja'
+                          : enderecoOk
+                          ? `${street}, ${number} — ${city}/${state}`
+                          : 'CEP, rua, número, bairro, cidade'
+                      }
+                      done={enderecoOk}
+                    />
+                  </div>
+                  {openSection === 'endereco' && (
+                    <div className="px-4 pb-5 pt-1 border-t border-stone-100 space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div
+                          onClick={() => setDeliveryOption('correios')}
+                          className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                            deliveryOption === 'correios' ? 'bg-gold-50/50 border-gold-300 ring-1 ring-gold-300' : 'bg-white border-stone-200 hover:bg-stone-50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Truck className="h-4 w-4 text-stone-700" />
+                            <p className="text-xs font-bold text-neutral-900">Envio pelos Correios</p>
+                          </div>
+                          <p className="text-[10px] text-stone-400 mt-1">Calcule digitando o CEP</p>
+                        </div>
+                        <div
+                          onClick={() => setDeliveryOption('store_pickup')}
+                          className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                            deliveryOption === 'store_pickup' ? 'bg-gold-50/50 border-gold-300 ring-1 ring-gold-300' : 'bg-white border-stone-200 hover:bg-stone-50'
+                          }`}
+                        >
+                          <p className="text-xs font-bold text-neutral-900">Retirada na Loja</p>
+                          <p className="text-[10px] text-stone-400 mt-1">Av. Almirante Barroso, 1980</p>
+                          <p className="text-[11px] text-emerald-600 font-bold tracking-widest uppercase mt-2">Grátis</p>
+                        </div>
+                      </div>
+
+                      {deliveryOption !== 'store_pickup' ? (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-[10px] text-stone-500 font-semibold block">CEP</label>
+                            <input type="text" value={cep} onChange={handleCEPChange} placeholder="01424-001" className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-xs focus:outline-none" />
+                            {cepLoading && <p className="text-[10px] text-stone-400 flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Buscando endereço…</p>}
+                            {errors.cep && <p className="text-[10px] text-red-500 font-medium">{errors.cep}</p>}
+                          </div>
+                          <div className="space-y-1 md:col-span-2">
+                            <label className="text-[10px] text-stone-500 font-semibold block">Rua / Logradouro</label>
+                            <input type="text" value={street} onChange={(e) => setStreet(e.target.value)} placeholder="Av. Almirante Barroso" className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-xs focus:outline-none" />
+                            {errors.street && <p className="text-[10px] text-red-500 font-medium">{errors.street}</p>}
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] text-stone-500 font-semibold block">Número</label>
+                            <input type="text" value={number} onChange={(e) => setNumber(e.target.value)} placeholder="1420" className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-xs focus:outline-none" />
+                            {errors.number && <p className="text-[10px] text-red-500 font-medium">{errors.number}</p>}
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] text-stone-500 font-semibold block">Complemento</label>
+                            <input type="text" value={complement} onChange={(e) => setComplement(e.target.value)} placeholder="Ex: Apto 42" className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-xs focus:outline-none" />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] text-stone-500 font-semibold block">Bairro</label>
+                            <input type="text" value={neighborhood} onChange={(e) => setNeighborhood(e.target.value)} placeholder="Jardins" className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-xs focus:outline-none" />
+                            {errors.neighborhood && <p className="text-[10px] text-red-500 font-medium">{errors.neighborhood}</p>}
+                          </div>
+                          <div className="space-y-1 md:col-span-2">
+                            <label className="text-[10px] text-stone-500 font-semibold block">Cidade</label>
+                            <input type="text" value={city} onChange={(e) => setCity(e.target.value)} placeholder="São Paulo" className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-xs focus:outline-none" />
+                            {errors.city && <p className="text-[10px] text-red-500 font-medium">{errors.city}</p>}
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] text-stone-500 font-semibold block">Estado (UF)</label>
+                            <input type="text" value={state} onChange={(e) => setState(e.target.value)} placeholder="SP" maxLength={2} className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-xs focus:outline-none uppercase" />
+                            {errors.state && <p className="text-[10px] text-red-500 font-medium">{errors.state}</p>}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <span className="text-[10px] uppercase tracking-widest text-stone-400 font-bold block">Selecione o Lounge para Retirada</span>
+                          {STORES_PICKUP.map((st: any) => (
+                            <div
+                              key={st.id}
+                              onClick={() => setSelectedStoreId(st.id)}
+                              className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-start gap-3 ${
+                                selectedStoreId === st.id ? 'bg-gold-50/50 border-gold-300 ring-1 ring-gold-300' : 'bg-white hover:bg-stone-50 border-stone-200'
                               }`}
                             >
-                              <p className="text-xs font-bold text-neutral-900">{q.nome}</p>
-                              <p className="text-[10px] text-stone-400 mt-1">
-                                {q.erro ? q.erro : `${q.prazoDias} dia(s) úteis`}
-                              </p>
-                              {!q.erro && (
-                                <p className="text-[11px] font-bold mt-2">
-                                  R$ {q.preco.toFixed(2).replace('.', ',')}
-                                </p>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+                              <div className="mt-1 flex items-center justify-center h-4 w-4 border border-stone-300 rounded-full shrink-0">
+                                {selectedStoreId === st.id && <div className="h-2.5 w-2.5 bg-gold-500 rounded-full" />}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-baseline gap-2">
+                                  <h4 className="text-xs font-bold text-neutral-900 truncate">{st.name}</h4>
+                                  <span className="text-[10px] font-mono text-gold-500 font-bold uppercase shrink-0">{st.distance}</span>
+                                </div>
+                                <p className="text-[11px] text-stone-500 mt-1">{st.address}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
 
-
-              {/* Address inputs for Deliveries */}
-              {deliveryOption !== 'store_pickup' ? (
-                <div className="space-y-4 pt-4 border-t border-stone-200">
-                  <span className="text-[10px] uppercase tracking-widest text-stone-400 font-bold block mb-1">Endereço de Entrega</span>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] text-stone-500 font-semibold block">CEP</label>
-                      <input
-                        type="text"
-                        value={cep}
-                        onChange={handleCEPChange}
-                        placeholder="01424-001"
-                        className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-xs focus:outline-none"
-                      />
-                      {cepLoading && <p className="text-[10px] text-stone-400 flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Buscando endereço…</p>}
-                      {errors.cep && <p className="text-[10px] text-red-500 font-medium">{errors.cep}</p>}
-                    </div>
-
-                    <div className="space-y-1 md:col-span-2">
-                      <label className="text-[10px] text-stone-500 font-semibold block">Rua / Logradouro</label>
-                      <input
-                        type="text"
-                        value={street}
-                        onChange={(e) => setStreet(e.target.value)}
-                        placeholder="Av. Almirante Barroso"
-                        className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-xs focus:outline-none"
-                      />
-                      {errors.street && <p className="text-[10px] text-red-500 font-medium">{errors.street}</p>}
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] text-stone-500 font-semibold block">Número</label>
-                      <input
-                        type="text"
-                        value={number}
-                        onChange={(e) => setNumber(e.target.value)}
-                        placeholder="1420"
-                        className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-xs focus:outline-none"
-                      />
-                      {errors.number && <p className="text-[10px] text-red-500 font-medium">{errors.number}</p>}
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] text-stone-500 font-semibold block">Complemento</label>
-                      <input
-                        type="text"
-                        value={complement}
-                        onChange={(e) => setComplement(e.target.value)}
-                        placeholder="Ex: Apto 42"
-                        className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-xs focus:outline-none"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] text-stone-500 font-semibold block">Bairro</label>
-                      <input
-                        type="text"
-                        value={neighborhood}
-                        onChange={(e) => setNeighborhood(e.target.value)}
-                        placeholder="Jardins"
-                        className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-xs focus:outline-none"
-                      />
-                      {errors.neighborhood && <p className="text-[10px] text-red-500 font-medium">{errors.neighborhood}</p>}
-                    </div>
-
-                    <div className="space-y-1 md:col-span-2">
-                      <label className="text-[10px] text-stone-500 font-semibold block">Cidade</label>
-                      <input
-                        type="text"
-                        value={city}
-                        onChange={(e) => setCity(e.target.value)}
-                        placeholder="São Paulo"
-                        className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-xs focus:outline-none"
-                      />
-                      {errors.city && <p className="text-[10px] text-red-500 font-medium">{errors.city}</p>}
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] text-stone-500 font-semibold block">Estado (UF)</label>
-                      <input
-                        type="text"
-                        value={state}
-                        onChange={(e) => setState(e.target.value)}
-                        placeholder="SP"
-                        maxLength={2}
-                        className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-xs focus:outline-none uppercase"
-                      />
-                      {errors.state && <p className="text-[10px] text-red-500 font-medium">{errors.state}</p>}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                /* Pickup store options selection list */
-                <div className="space-y-4 pt-4 border-t border-stone-200">
-                  <span className="text-[10px] uppercase tracking-widest text-stone-400 font-bold block mb-1">Selecione o Lounge para Retirada</span>
-                  <div className="space-y-3">
-                    {STORES_PICKUP.map((st: any) => (
-                      <div
-                        key={st.id}
-                        onClick={() => setSelectedStoreId(st.id)}
-                        className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-start gap-3 ${
-                          selectedStoreId === st.id
-                            ? 'bg-gold-50/50 border-gold-300 ring-1 ring-gold-300'
-                            : 'bg-white hover:bg-stone-50 border-stone-200'
-                        }`}
+                      <button
+                        type="button"
+                        disabled={!enderecoOk}
+                        onClick={() => setOpenSection(deliveryOption === 'store_pickup' ? 'frete' : 'frete')}
+                        className="w-full bg-neutral-900 disabled:bg-stone-300 disabled:cursor-not-allowed hover:bg-gold-500 text-stone-100 py-3 rounded-xl text-[11px] font-semibold uppercase tracking-widest transition-all flex items-center justify-center gap-1.5"
                       >
-                        <div className="mt-1 flex items-center justify-center h-4 w-4 border border-stone-300 rounded-full">
-                          {selectedStoreId === st.id && <div className="h-2.5 w-2.5 bg-gold-500 rounded-full" />}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex justify-between items-baseline">
-                            <h4 className="text-xs font-bold text-neutral-900">{st.name}</h4>
-                            <span className="text-[10px] font-mono text-gold-500 font-bold uppercase">{st.distance}</span>
-                          </div>
-                          <p className="text-[11px] text-stone-500 mt-1">{st.address}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                        {deliveryOption === 'store_pickup' ? 'Confirmar Retirada' : 'Continuar para Frete'} <ArrowRight className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
-              )}
 
-              {/* Action row to continue to gateway step */}
-              <button
-                onClick={handleGoToPayment}
-                className="w-full mt-6 bg-neutral-900 hover:bg-gold-500 text-stone-100 py-4 rounded-xl text-xs font-semibold uppercase tracking-widest shadow-md hover:shadow-xl hover:translate-y-[-1px] transition-all flex items-center justify-center gap-1.5 focus:outline-none"
-              >
-                Prosseguir para o Pagamento <ArrowRight className="h-4 w-4" />
-              </button>
-            </div>
-          )}
+                {/* FRETE */}
+                <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden">
+                  <div onClick={() => toggle('frete')} className="cursor-pointer">
+                    <SectionHeader
+                      id="frete"
+                      icon={Package}
+                      title="3. Opção de Frete"
+                      subtitle={
+                        deliveryOption === 'store_pickup'
+                          ? 'Retirada grátis em loja'
+                          : selectedQuote
+                          ? `${selectedQuote.nome} • R$ ${selectedQuote.preco.toFixed(2).replace('.', ',')} • ${selectedQuote.prazoDias} dias`
+                          : 'Escolha PAC, SEDEX ou Mini Envios'
+                      }
+                      done={freteOk}
+                    />
+                  </div>
+                  {openSection === 'frete' && (
+                    <div className="px-4 pb-5 pt-1 border-t border-stone-100 space-y-3">
+                      {deliveryOption === 'store_pickup' ? (
+                        <div className="text-center py-6 bg-emerald-50 border border-emerald-100 rounded-xl">
+                          <p className="text-xs font-bold text-emerald-700">Retirada grátis em loja</p>
+                          <p className="text-[10px] text-emerald-600 mt-1">Disponível em até 2 dias úteis</p>
+                        </div>
+                      ) : (
+                        <>
+                          {freteLoading && (
+                            <div className="flex items-center gap-2 text-[11px] text-stone-500">
+                              <Loader2 className="h-3 w-3 animate-spin" /> Calculando frete...
+                            </div>
+                          )}
+                          {freteErro && !freteLoading && <p className="text-[11px] text-red-600">{freteErro}</p>}
+                          {!freteLoading && freteQuotes.length === 0 && !freteErro && (
+                            <p className="text-[11px] text-stone-400">Preencha o CEP na seção anterior para calcular o frete.</p>
+                          )}
+                          {!freteLoading && freteQuotes.length > 0 && (
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                              {freteQuotes.map((q) => {
+                                const disabled = !!q.erro || q.preco === 0;
+                                const isSel = selectedFreteCodigo === q.codigo;
+                                return (
+                                  <button
+                                    key={q.codigo}
+                                    type="button"
+                                    disabled={disabled}
+                                    onClick={() => setSelectedFreteCodigo(q.codigo)}
+                                    className={`text-left p-3 rounded-xl border transition-all ${
+                                      disabled
+                                        ? 'opacity-40 cursor-not-allowed border-stone-200 bg-stone-50'
+                                        : isSel
+                                        ? 'bg-gold-50/50 border-gold-300 ring-1 ring-gold-300'
+                                        : 'bg-white border-stone-200 hover:bg-stone-50'
+                                    }`}
+                                  >
+                                    <p className="text-xs font-bold text-neutral-900">{q.nome}</p>
+                                    <p className="text-[10px] text-stone-400 mt-1">{q.erro ? q.erro : `${q.prazoDias} dia(s) úteis`}</p>
+                                    {!q.erro && (
+                                      <p className="text-[11px] font-bold mt-2">R$ {q.preco.toFixed(2).replace('.', ',')}</p>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                          {errors.frete && <p className="text-[10px] text-red-500 font-medium">{errors.frete}</p>}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Action row to continue to gateway step */}
+                <button
+                  onClick={handleGoToPayment}
+                  className="w-full mt-4 bg-neutral-900 hover:bg-gold-500 text-stone-100 py-4 rounded-xl text-xs font-semibold uppercase tracking-widest shadow-md hover:shadow-xl hover:translate-y-[-1px] transition-all flex items-center justify-center gap-1.5 focus:outline-none"
+                >
+                  Ir para o Pagamento <ArrowRight className="h-4 w-4" />
+                </button>
+              </div>
+            );
+          })()}
 
           {/* Form Step: 2 - Payment Gateway options */}
           {step === 'payment' && (
