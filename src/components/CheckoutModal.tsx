@@ -297,11 +297,12 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, subtotal, di
               deliveryOption === 'store_pickup' ||
               (!!selectedQuote && selectedQuote.preco > 0);
 
+            const currentStep: string = step;
             const stepsMeta = [
-              { id: 'endereco', label: 'Endereço', icon: MapPin, done: contatoOk && enderecoOk, active: step === 'info' },
-              { id: 'frete', label: 'Frete', icon: Truck, done: freteOk && contatoOk && enderecoOk, active: step === 'info' && (openSection === 'frete') },
-              { id: 'pagamento', label: 'Pagamento', icon: CreditCard, done: step === 'done', active: step === 'payment' },
-              { id: 'revisao', label: 'Revisão', icon: ClipboardList, done: step === 'done', active: step === 'done' },
+              { id: 'endereco', label: 'Endereço', icon: MapPin, done: contatoOk && enderecoOk, active: currentStep === 'info' },
+              { id: 'frete', label: 'Frete', icon: Truck, done: freteOk && contatoOk && enderecoOk, active: currentStep === 'info' && (openSection === 'frete') },
+              { id: 'pagamento', label: 'Pagamento', icon: CreditCard, done: currentStep === 'done', active: currentStep === 'payment' },
+              { id: 'revisao', label: 'Revisão', icon: ClipboardList, done: currentStep === 'done', active: currentStep === 'done' },
             ];
 
             return (
