@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, ArrowLeft, CreditCard, QrCode, ClipboardList, CheckCircle2, Loader2, Sparkles, Send, MapPin, Receipt, Check, Copy, ArrowRight, Truck } from 'lucide-react';
+import { X, ArrowLeft, CreditCard, QrCode, ClipboardList, CheckCircle2, Loader2, Sparkles, Send, MapPin, Receipt, Check, Copy, ArrowRight, Truck, ChevronDown, User, Package } from 'lucide-react';
 import { useServerFn } from '@tanstack/react-start';
 import { CartItem, ShippingAddress, PaymentMethod, CheckoutState } from '../types';
 import { STORES_PICKUP } from '../data/catalog';
