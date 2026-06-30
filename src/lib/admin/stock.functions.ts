@@ -48,11 +48,20 @@ export const listStockAlerts = createServerFn({ method: "GET" })
   .middleware([requireAdmin])
   .handler(async ({ context }) => {
     const { supabase } = context as any;
+    // PostgREST não suporta comparação coluna-a-coluna em filtros de URL,
+    // então buscamos os produtos com estoque baixo (qty <= 10 ou min > 0)
+    // e filtramos a regra exata em JS.
     const { data: rows, error } = await supabase
       .from("scz_products")
-      .select("id,name,sku,stock_qty,stock_min")
-      .or("stock_qty.eq.0,and(stock_min.gt.0,stock_qty.lte.stock_min)")
-      .order("stock_qty");
+      .select("id,name,sku,stock_qty,stock_min,is_active,has_variants")
+      .eq("is_active", true)
+      .eq("has_variants", false)
+      .or("stock_qty.eq.0,stock_min.gt.0")
+      .order("stock_qty")
+      .limit(200);
     if (error) throw new Error(error.message);
-    return rows ?? [];
+    const alerts = (rows ?? []).filter(
+      (r: any) => r.stock_qty === 0 || (r.stock_min > 0 && r.stock_qty <= r.stock_min),
+    );
+    return alerts;
   });
