@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { listBanners, upsertBanner, deleteBanner } from "@/lib/admin/banners.functions";
-import { getR2UploadUrl } from "@/lib/r2.functions";
+import { uploadProductMedia } from "@/lib/r2.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,7 +45,7 @@ function BannersPage() {
   const fetchBanners = useServerFn(listBanners);
   const save = useServerFn(upsertBanner);
   const del = useServerFn(deleteBanner);
-  const getUploadUrl = useServerFn(getR2UploadUrl);
+  const uploadMedia = useServerFn(uploadProductMedia);
   const qc = useQueryClient();
 
   const [open, setOpen] = useState(false);
@@ -76,20 +76,31 @@ function BannersPage() {
   });
 
   async function onFile(file: File) {
+    if (file.size > 25 * 1024 * 1024) {
+      toast.error("Arquivo excede 25MB");
+      return;
+    }
     setUploading(true);
     try {
-      const presigned = await getUploadUrl({
-        data: { filename: file.name, contentType: file.type || "application/octet-stream" },
+      const buf = await file.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      let binary = "";
+      const chunk = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunk) {
+        binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunk)) as any);
+      }
+      const dataBase64 = btoa(binary);
+      const res = await uploadMedia({
+        data: {
+          filename: file.name,
+          contentType: file.type || "application/octet-stream",
+          dataBase64,
+        },
       });
-      const put = await fetch(presigned.uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": file.type || "application/octet-stream" },
-        body: file,
-      });
-      if (!put.ok) throw new Error("Falha no upload");
-      setForm({ ...form, image_url: presigned.publicUrl });
+      setForm({ ...form, image_url: res.publicUrl });
+      toast.success("Imagem enviada");
     } catch (e: any) {
-      toast.error(e?.message || "Erro");
+      toast.error(e?.message || "Erro no upload");
     } finally {
       setUploading(false);
     }
