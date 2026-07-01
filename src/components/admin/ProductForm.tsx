@@ -14,6 +14,7 @@ import {
   duplicateProduct,
 } from "@/lib/admin/products.functions";
 import { listVariants, syncProductVariants } from "@/lib/admin/variants.functions";
+import { listBrands } from "@/lib/admin/stock-erp.functions";
 import { uploadProductMedia } from "@/lib/r2.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,15 +24,21 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Upload, X, Save, Copy, Plus, Trash2, ArrowUp, ArrowDown, Star } from "lucide-react";
+import { Loader2, Upload, X, Save, Copy, Plus, Trash2, ArrowUp, ArrowDown, Star, Info } from "lucide-react";
 
 const schema = z.object({
   name: z.string().min(1, "Informe o nome do produto"),
   slug: z.string().optional(),
   category_id: z.string().uuid().optional().nullable(),
+  subcategory_id: z.string().uuid().optional().nullable(),
   collection_id: z.string().uuid().optional().nullable(),
+  brand_id: z.string().uuid().optional().nullable(),
   sku: z.string().optional(),
+  internal_code: z.string().optional(),
   brand: z.string().optional(),
+  gender: z.string().optional(),
+  material: z.string().optional(),
+  specifications: z.string().optional(),
   short_description: z.string().optional(),
   description: z.string().optional(),
   price_brl: z.number({ message: "Informe o preço" }).min(0),
@@ -41,8 +48,7 @@ const schema = z.object({
   width_cm: z.number().min(0).optional(),
   height_cm: z.number().min(0).optional(),
   depth_cm: z.number().min(0).optional(),
-  stock_qty: z.number().int().min(0).optional(),
-  stock_min: z.number().int().min(0).optional(),
+  length_cm: z.number().min(0).optional(),
   sort_order: z.number().int().min(0).optional(),
   seo_title: z.string().optional(),
   seo_description: z.string().optional(),
@@ -52,6 +58,7 @@ const schema = z.object({
   is_launch: z.boolean(),
   is_on_sale: z.boolean(),
   is_bestseller: z.boolean(),
+  is_exclusive: z.boolean(),
   has_variants: z.boolean(),
 });
 
@@ -60,15 +67,16 @@ type FormValues = z.infer<typeof schema>;
 type Variant = {
   id?: string;
   sku?: string | null;
+  internal_code?: string | null;
   size?: string | null;
   color?: string | null;
   color_hex?: string | null;
   model?: string | null;
+  material?: string | null;
+  finish?: string | null;
   barcode?: string | null;
   price_cents?: number | null;
   promo_price?: number | null;
-  stock_qty: number;
-  stock_min: number;
   is_active: boolean;
   sort_order: number;
 };
@@ -81,12 +89,14 @@ export function ProductForm({ initial }: { initial?: any }) {
   const fetchImages = useServerFn(getProductImages);
   const fetchCategories = useServerFn(listCategories);
   const fetchCollections = useServerFn(listCollectionsForSelect);
+  const fetchBrands = useServerFn(listBrands);
   const fetchVariants = useServerFn(listVariants);
   const saveVariants = useServerFn(syncProductVariants);
   const dup = useServerFn(duplicateProduct);
 
   const { data: categories } = useQuery({ queryKey: ["admin", "categories-select"], queryFn: () => fetchCategories() });
   const { data: collections } = useQuery({ queryKey: ["admin", "collections-select"], queryFn: () => fetchCollections() });
+  const { data: brands } = useQuery({ queryKey: ["admin", "brands-select"], queryFn: () => fetchBrands() });
 
   const { data: existingImages } = useQuery({
     queryKey: ["admin", "product-images", initial?.id],
@@ -106,10 +116,6 @@ export function ProductForm({ initial }: { initial?: any }) {
   const imagesHydrated = useRef(false);
   const variantsHydrated = useRef(false);
 
-  // Hidrata as imagens existentes uma única vez quando chegam do servidor.
-  // Antes, se o usuário fizesse upload antes da carga terminar, as imagens
-  // existentes eram perdidas porque o useEffect só sincronizava enquanto o
-  // state estivesse vazio.
   useEffect(() => {
     if (!imagesHydrated.current && existingImages) {
       setImages(existingImages.map((i: any) => i.url));
@@ -124,8 +130,6 @@ export function ProductForm({ initial }: { initial?: any }) {
     }
   }, [existingVariants]);
 
-  // Fonte única de verdade: o array `images`. Antes de hidratar mostramos o
-  // que já veio do servidor para o usuário não ver tela vazia.
   const imgs = imagesHydrated.current ? images : (existingImages?.map((i: any) => i.url) ?? images);
 
   function moveImage(from: number, to: number) {
@@ -145,7 +149,7 @@ export function ProductForm({ initial }: { initial?: any }) {
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     if (files.length === 0) return;
-    const MAX = 25 * 1024 * 1024; // 25MB
+    const MAX = 25 * 1024 * 1024;
     setUploading(true);
     try {
       const next = [...imgs];
@@ -155,7 +159,6 @@ export function ProductForm({ initial }: { initial?: any }) {
           continue;
         }
         const buf = await file.arrayBuffer();
-        // Convert to base64 in chunks (evita stack overflow em arquivos grandes)
         const bytes = new Uint8Array(buf);
         let binary = "";
         const chunk = 0x8000;
@@ -164,11 +167,7 @@ export function ProductForm({ initial }: { initial?: any }) {
         }
         const dataBase64 = btoa(binary);
         const res = await uploadMedia({
-          data: {
-            filename: file.name,
-            contentType: file.type || "application/octet-stream",
-            dataBase64,
-          },
+          data: { filename: file.name, contentType: file.type || "application/octet-stream", dataBase64 },
         });
         next.push(res.publicUrl);
       }
@@ -189,9 +188,15 @@ export function ProductForm({ initial }: { initial?: any }) {
       name: initial?.name ?? "",
       slug: initial?.slug ?? "",
       category_id: initial?.category_id ?? undefined,
+      subcategory_id: initial?.subcategory_id ?? undefined,
       collection_id: initial?.collection_id ?? undefined,
+      brand_id: initial?.brand_id ?? undefined,
       sku: initial?.sku ?? "",
+      internal_code: initial?.internal_code ?? "",
       brand: initial?.brand ?? "",
+      gender: initial?.gender ?? "",
+      material: initial?.material ?? "",
+      specifications: initial?.specifications ?? "",
       short_description: initial?.short_description ?? "",
       description: initial?.description ?? "",
       price_brl: initial ? Number(initial.price_cents) / 100 : 0,
@@ -201,8 +206,7 @@ export function ProductForm({ initial }: { initial?: any }) {
       width_cm: initial?.width_cm ?? undefined,
       height_cm: initial?.height_cm ?? undefined,
       depth_cm: initial?.depth_cm ?? undefined,
-      stock_qty: initial?.stock_qty ?? 0,
-      stock_min: initial?.stock_min ?? 0,
+      length_cm: initial?.length_cm ?? undefined,
       sort_order: initial?.sort_order ?? 0,
       seo_title: initial?.seo_title ?? "",
       seo_description: initial?.seo_description ?? "",
@@ -212,6 +216,7 @@ export function ProductForm({ initial }: { initial?: any }) {
       is_launch: initial?.is_launch ?? false,
       is_on_sale: initial?.is_on_sale ?? false,
       is_bestseller: initial?.is_bestseller ?? false,
+      is_exclusive: initial?.is_exclusive ?? false,
       has_variants: initial?.has_variants ?? false,
     },
   });
@@ -223,9 +228,15 @@ export function ProductForm({ initial }: { initial?: any }) {
         name: v.name,
         slug: v.slug?.trim() || undefined,
         category_id: v.category_id || null,
+        subcategory_id: v.subcategory_id || null,
         collection_id: v.collection_id || null,
+        brand_id: v.brand_id || null,
         sku: v.sku || null,
+        internal_code: v.internal_code || null,
         brand: v.brand || null,
+        gender: v.gender || null,
+        material: v.material || null,
+        specifications: v.specifications || null,
         short_description: v.short_description || null,
         description: v.description || null,
         price_cents: Math.round(v.price_brl * 100),
@@ -235,8 +246,7 @@ export function ProductForm({ initial }: { initial?: any }) {
         width_cm: v.width_cm ?? null,
         height_cm: v.height_cm ?? null,
         depth_cm: v.depth_cm ?? null,
-        stock_qty: v.stock_qty ?? 0,
-        stock_min: v.stock_min ?? 0,
+        length_cm: v.length_cm ?? null,
         sort_order: v.sort_order ?? 0,
         seo_title: v.seo_title || null,
         seo_description: v.seo_description || null,
@@ -246,6 +256,7 @@ export function ProductForm({ initial }: { initial?: any }) {
         is_launch: v.is_launch,
         is_on_sale: v.is_on_sale,
         is_bestseller: v.is_bestseller,
+        is_exclusive: v.is_exclusive,
         has_variants: v.has_variants,
         images: imgs,
       };
@@ -275,25 +286,20 @@ export function ProductForm({ initial }: { initial?: any }) {
     onError: (e: any) => toast.error(e?.message || "Erro ao duplicar"),
   });
 
-  const FIELD_LABELS: Record<string, string> = {
-    name: "Nome do produto",
-    price_brl: "Preço de venda",
-  };
+  const FIELD_LABELS: Record<string, string> = { name: "Nome do produto", price_brl: "Preço de venda" };
   function onInvalid(errors: any) {
     const missing = Object.keys(errors).map((k) => FIELD_LABELS[k] || k).join(", ");
     toast.error(`Não foi possível publicar. Verifique: ${missing}`, { duration: 6000 });
   }
 
   const hasVariants = form.watch("has_variants");
-
-  // Parent vs child category list
   const parentCats = (categories ?? []).filter((c: any) => !c.parent_id);
   const childCats = (categories ?? []).filter((c: any) => c.parent_id);
   const selectedCat = form.watch("category_id");
   const subOptions = childCats.filter((c: any) => c.parent_id === selectedCat);
 
   function generateGrid() {
-    const sizesStr = prompt("Tamanhos (separados por vírgula). Ex: 35,36,37,38");
+    const sizesStr = prompt("Tamanhos (separados por vírgula). Ex: 35,36,37,38 ou PP,P,M,G,GG");
     if (!sizesStr) return;
     const colorsStr = prompt("Cores (separadas por vírgula). Deixe vazio para apenas tamanhos.");
     const sizes = sizesStr.split(",").map((s) => s.trim()).filter(Boolean);
@@ -301,9 +307,9 @@ export function ProductForm({ initial }: { initial?: any }) {
     const newVars: Variant[] = [];
     let i = 0;
     if (colors.length === 0) {
-      for (const s of sizes) newVars.push({ size: s, color: null, stock_qty: 0, stock_min: 0, is_active: true, sort_order: i++ });
+      for (const s of sizes) newVars.push({ size: s, color: null, is_active: true, sort_order: i++ });
     } else {
-      for (const s of sizes) for (const c of colors) newVars.push({ size: s, color: c, stock_qty: 0, stock_min: 0, is_active: true, sort_order: i++ });
+      for (const s of sizes) for (const c of colors) newVars.push({ size: s, color: c, is_active: true, sort_order: i++ });
     }
     setVariants(newVars);
     form.setValue("has_variants", true);
@@ -327,23 +333,41 @@ export function ProductForm({ initial }: { initial?: any }) {
         </div>
       </div>
 
-      <Tabs defaultValue="geral" className="w-full">
+      <div className="rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-900 p-3 flex gap-2">
+        <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
+        <p>
+          <strong>Novo fluxo:</strong> este formulário cadastra apenas informações comerciais do produto. Todo o
+          controle de estoque (entrada, saída, ajustes, transferências, inventário) agora fica no módulo{" "}
+          <strong>Estoque</strong> no menu lateral.
+        </p>
+      </div>
+
+      <Tabs defaultValue="basico" className="w-full">
         <TabsList className="bg-white border border-stone-200 flex-wrap h-auto">
-          <TabsTrigger value="geral">Geral</TabsTrigger>
-          <TabsTrigger value="midia">Mídia</TabsTrigger>
-          <TabsTrigger value="preco">Preço</TabsTrigger>
-          <TabsTrigger value="estoque">Estoque</TabsTrigger>
+          <TabsTrigger value="basico">Básico</TabsTrigger>
+          <TabsTrigger value="midia">Mídias</TabsTrigger>
+          <TabsTrigger value="venda">Venda</TabsTrigger>
           <TabsTrigger value="variacoes">Variações</TabsTrigger>
           <TabsTrigger value="seo">SEO</TabsTrigger>
-          <TabsTrigger value="flags">Destaques</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="geral">
+        {/* BÁSICO */}
+        <TabsContent value="basico">
           <Card>
             <CardContent className="space-y-4 pt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Field label="Nome do produto *" error={form.formState.errors.name?.message}>
                   <Input {...form.register("name")} placeholder="Ex: Scarpin Couro Premium" autoFocus />
+                </Field>
+                <Field label="Marca">
+                  <Select value={form.watch("brand_id") ?? ""} onValueChange={(v) => form.setValue("brand_id", v || null)}>
+                    <SelectTrigger><SelectValue placeholder="Selecione (opcional)" /></SelectTrigger>
+                    <SelectContent>
+                      {(brands ?? []).map((b: any) => (
+                        <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </Field>
                 <Field label="Categoria">
                   <Select value={selectedCat ?? ""} onValueChange={(v) => form.setValue("category_id", v || null)}>
@@ -356,9 +380,9 @@ export function ProductForm({ initial }: { initial?: any }) {
                   </Select>
                 </Field>
                 {selectedCat && subOptions.length > 0 && (
-                  <Field label="Subcategoria (escolha a categoria filha como principal se desejar)">
-                    <Select value={selectedCat ?? ""} onValueChange={(v) => form.setValue("category_id", v || null)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Field label="Subcategoria">
+                    <Select value={form.watch("subcategory_id") ?? ""} onValueChange={(v) => form.setValue("subcategory_id", v || null)}>
+                      <SelectTrigger><SelectValue placeholder="Selecione (opcional)" /></SelectTrigger>
                       <SelectContent>
                         {subOptions.map((c: any) => (
                           <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
@@ -377,10 +401,27 @@ export function ProductForm({ initial }: { initial?: any }) {
                     </SelectContent>
                   </Select>
                 </Field>
-                <Field label="SKU (opcional)"><Input {...form.register("sku")} /></Field>
-                <Field label="Marca (opcional)"><Input {...form.register("brand")} /></Field>
-                <Field label="Slug / URL (gerado automático)"><Input {...form.register("slug")} placeholder="deixe vazio" /></Field>
-                <Field label="Ordem (menor aparece primeiro)">
+                <Field label="Gênero">
+                  <Select value={form.watch("gender") ?? ""} onValueChange={(v) => form.setValue("gender", v)}>
+                    <SelectTrigger><SelectValue placeholder="(opcional)" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="feminino">Feminino</SelectItem>
+                      <SelectItem value="masculino">Masculino</SelectItem>
+                      <SelectItem value="unissex">Unissex</SelectItem>
+                      <SelectItem value="infantil">Infantil</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <Field label="SKU (produto)"><Input {...form.register("sku")} /></Field>
+                <Field label="Código interno"><Input {...form.register("internal_code")} /></Field>
+                <Field label="Material"><Input {...form.register("material")} placeholder="Ex: Couro legítimo" /></Field>
+                <Field label="Peso (g)"><Input type="number" {...form.register("weight_g", { valueAsNumber: true })} /></Field>
+                <Field label="Largura (cm)"><Input type="number" step="0.1" {...form.register("width_cm", { valueAsNumber: true })} /></Field>
+                <Field label="Altura (cm)"><Input type="number" step="0.1" {...form.register("height_cm", { valueAsNumber: true })} /></Field>
+                <Field label="Profundidade (cm)"><Input type="number" step="0.1" {...form.register("depth_cm", { valueAsNumber: true })} /></Field>
+                <Field label="Comprimento (cm)"><Input type="number" step="0.1" {...form.register("length_cm", { valueAsNumber: true })} /></Field>
+                <Field label="Slug (auto)"><Input {...form.register("slug")} placeholder="deixe vazio" /></Field>
+                <Field label="Ordem exibição">
                   <Input type="number" {...form.register("sort_order", { valueAsNumber: true })} />
                 </Field>
               </div>
@@ -390,10 +431,14 @@ export function ProductForm({ initial }: { initial?: any }) {
               <Field label="Descrição completa">
                 <Textarea rows={6} {...form.register("description")} />
               </Field>
+              <Field label="Especificações técnicas">
+                <Textarea rows={4} {...form.register("specifications")} placeholder="Uma por linha" />
+              </Field>
             </CardContent>
           </Card>
         </TabsContent>
 
+        {/* MÍDIA */}
         <TabsContent value="midia">
           <Card>
             <CardContent className="space-y-4 pt-6">
@@ -401,7 +446,7 @@ export function ProductForm({ initial }: { initial?: any }) {
                 <input type="file" accept="image/*,video/*" multiple className="sr-only" onChange={handleUpload} disabled={uploading} />
                 {uploading ? <Loader2 className="h-6 w-6 animate-spin mx-auto text-amber-600" /> : <Upload className="h-6 w-6 mx-auto text-amber-600" />}
                 <p className="mt-2 text-sm font-medium">{uploading ? "Enviando…" : "Clique para enviar fotos/vídeos"}</p>
-                <p className="text-[11px] text-stone-500">JPG, PNG, WebP, MP4 — múltiplos arquivos</p>
+                <p className="text-[11px] text-stone-500">JPG, PNG, WebP, MP4 — múltiplos arquivos, até 25MB cada</p>
               </label>
               {imgs.length > 0 && (
                 <div className="space-y-2">
@@ -409,9 +454,7 @@ export function ProductForm({ initial }: { initial?: any }) {
                     <p className="text-xs font-semibold text-stone-700 uppercase tracking-wider">
                       Mídias do produto ({imgs.length})
                     </p>
-                    <p className="text-[11px] text-stone-500">
-                      A primeira é a capa. Use as setas para reordenar — essa é a sequência exibida na página do produto.
-                    </p>
+                    <p className="text-[11px] text-stone-500">A primeira é a capa.</p>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                     {imgs.map((url: string, i: number) => (
@@ -421,9 +464,7 @@ export function ProductForm({ initial }: { initial?: any }) {
                         ) : (
                           <img src={url} className="w-full h-full object-cover" alt={`mídia ${i + 1}`} />
                         )}
-                        <span className="absolute top-1 left-1 text-[10px] font-mono font-bold bg-neutral-900/80 text-white px-1.5 py-0.5 rounded">
-                          {i + 1}
-                        </span>
+                        <span className="absolute top-1 left-1 text-[10px] font-mono font-bold bg-neutral-900/80 text-white px-1.5 py-0.5 rounded">{i + 1}</span>
                         {i === 0 && (
                           <div className="absolute bottom-1 left-1 flex items-center gap-1 text-[9px] uppercase tracking-wider bg-amber-600 text-white px-1.5 py-0.5 rounded">
                             <Star className="h-2.5 w-2.5" /> Capa
@@ -431,110 +472,78 @@ export function ProductForm({ initial }: { initial?: any }) {
                         )}
                         <div className="absolute inset-x-1 bottom-1 flex items-center justify-between gap-1 opacity-0 group-hover:opacity-100 transition">
                           <div className="flex gap-1">
-                            <button
-                              type="button"
-                              title="Mover para a esquerda"
-                              onClick={() => moveImage(i, i - 1)}
-                              disabled={i === 0}
-                              className="h-6 w-6 rounded bg-white/90 flex items-center justify-center disabled:opacity-30 hover:bg-white"
-                            >
+                            <button type="button" title="Anterior" onClick={() => moveImage(i, i - 1)} disabled={i === 0} className="h-6 w-6 rounded bg-white/90 flex items-center justify-center disabled:opacity-30 hover:bg-white">
                               <ArrowUp className="h-3 w-3 -rotate-90" />
                             </button>
-                            <button
-                              type="button"
-                              title="Mover para a direita"
-                              onClick={() => moveImage(i, i + 1)}
-                              disabled={i === imgs.length - 1}
-                              className="h-6 w-6 rounded bg-white/90 flex items-center justify-center disabled:opacity-30 hover:bg-white"
-                            >
+                            <button type="button" title="Próximo" onClick={() => moveImage(i, i + 1)} disabled={i === imgs.length - 1} className="h-6 w-6 rounded bg-white/90 flex items-center justify-center disabled:opacity-30 hover:bg-white">
                               <ArrowDown className="h-3 w-3 -rotate-90" />
                             </button>
                             {i !== 0 && (
-                              <button
-                                type="button"
-                                title="Tornar capa"
-                                onClick={() => moveImage(i, 0)}
-                                className="h-6 w-6 rounded bg-white/90 flex items-center justify-center hover:bg-amber-100"
-                              >
+                              <button type="button" title="Tornar capa" onClick={() => moveImage(i, 0)} className="h-6 w-6 rounded bg-white/90 flex items-center justify-center hover:bg-amber-100">
                                 <Star className="h-3 w-3 text-amber-600" />
                               </button>
                             )}
                           </div>
-                          <button
-                            type="button"
-                            title="Remover"
-                            onClick={() => removeImage(i)}
-                            className="h-6 w-6 rounded bg-white/90 flex items-center justify-center hover:bg-rose-100"
-                          >
+                          <button type="button" title="Remover" onClick={() => removeImage(i)} className="h-6 w-6 rounded bg-white/90 flex items-center justify-center hover:bg-rose-100">
                             <X className="h-3 w-3 text-rose-600" />
                           </button>
                         </div>
                       </div>
                     ))}
                   </div>
-                  <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
-                    ⚠️ Lembre de clicar em <strong>Salvar e publicar</strong> para que as alterações de mídia sejam gravadas no banco.
-                  </p>
                 </div>
               )}
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="preco">
+        {/* VENDA */}
+        <TabsContent value="venda">
           <Card>
             <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-6">
               <Field label="Preço de venda (R$) *" error={form.formState.errors.price_brl?.message as string}>
                 <Input type="number" step="0.01" {...form.register("price_brl", { valueAsNumber: true })} />
               </Field>
-              <Field label="Preço promocional (R$)"><Input type="number" step="0.01" {...form.register("promo_price", { valueAsNumber: true })} /></Field>
-              <Field label="Custo (R$)"><Input type="number" step="0.01" {...form.register("cost_price", { valueAsNumber: true })} /></Field>
-              <Field label="Peso (g)"><Input type="number" {...form.register("weight_g", { valueAsNumber: true })} /></Field>
-              <Field label="Largura (cm)"><Input type="number" step="0.1" {...form.register("width_cm", { valueAsNumber: true })} /></Field>
-              <Field label="Altura (cm)"><Input type="number" step="0.1" {...form.register("height_cm", { valueAsNumber: true })} /></Field>
-              <Field label="Profundidade (cm)"><Input type="number" step="0.1" {...form.register("depth_cm", { valueAsNumber: true })} /></Field>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="estoque">
-          <Card>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6">
-              {!hasVariants && (
-                <>
-                  <Field label="Quantidade atual"><Input type="number" {...form.register("stock_qty", { valueAsNumber: true })} /></Field>
-                  <Field label="Quantidade mínima (alerta)"><Input type="number" {...form.register("stock_min", { valueAsNumber: true })} /></Field>
-                </>
-              )}
-              <div className="md:col-span-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900 p-3 leading-relaxed">
-                {hasVariants ? (
-                  <>O estoque está sendo controlado pelas <strong>variações</strong>. Edite quantidade por tamanho/cor na aba "Variações".</>
-                ) : initial?.id ? (
-                  <>Alterações em "Quantidade atual" geram automaticamente um <strong>Ajuste</strong> em Estoque.</>
-                ) : (
-                  <>A quantidade informada será lançada como <strong>Entrada</strong> em Estoque.</>
-                )}
+              <Field label="Preço promocional (R$)">
+                <Input type="number" step="0.01" {...form.register("promo_price", { valueAsNumber: true })} />
+              </Field>
+              <Field label="Custo (R$)">
+                <Input type="number" step="0.01" {...form.register("cost_price", { valueAsNumber: true })} />
+              </Field>
+              <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Flag label="Produto ativo (visível na loja)" name="is_active" form={form} />
+                <Flag label="Produto em destaque" name="is_featured" form={form} />
+                <Flag label="Lançamento (aparece em Novidades)" name="is_launch" form={form} />
+                <Flag label="Em promoção (aparece em Promoção)" name="is_on_sale" form={form} />
+                <Flag label="Mais vendido" name="is_bestseller" form={form} />
+                <Flag label="Produto exclusivo" name="is_exclusive" form={form} />
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
+        {/* VARIAÇÕES */}
         <TabsContent value="variacoes">
           <Card>
             <CardContent className="space-y-3 pt-6">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="flex items-center gap-3">
                   <Switch checked={hasVariants} onCheckedChange={(v) => form.setValue("has_variants", v)} />
-                  <span className="text-sm">Este produto tem variações (tamanho/cor/modelo)</span>
+                  <span className="text-sm">Este produto tem variações (tamanho / cor / modelo)</span>
                 </div>
                 {hasVariants && (
                   <div className="flex gap-2">
                     <Button type="button" size="sm" variant="outline" onClick={generateGrid}>Gerar grade</Button>
-                    <Button type="button" size="sm" variant="outline" onClick={() => setVariants((vs) => [...vs, { stock_qty: 0, stock_min: 0, is_active: true, sort_order: vs.length }])}>
+                    <Button type="button" size="sm" variant="outline" onClick={() => setVariants((vs) => [...vs, { is_active: true, sort_order: vs.length }])}>
                       <Plus className="h-4 w-4 mr-1" /> Adicionar
                     </Button>
                   </div>
                 )}
+              </div>
+
+              <div className="rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900 p-3">
+                <strong>Variações são apenas identificação</strong> (SKU, tamanho, cor, código de barras).
+                Os saldos por variação são gerenciados no módulo <strong>Estoque</strong>.
               </div>
 
               {hasVariants && variants.length === 0 && (
@@ -549,23 +558,27 @@ export function ProductForm({ initial }: { initial?: any }) {
                         <th className="p-2">Tamanho</th>
                         <th className="p-2">Cor</th>
                         <th className="p-2">Modelo</th>
+                        <th className="p-2">Material</th>
+                        <th className="p-2">Acabamento</th>
                         <th className="p-2">SKU</th>
+                        <th className="p-2">Cód. interno</th>
+                        <th className="p-2">Cód. barras</th>
                         <th className="p-2">Preço (R$)</th>
-                        <th className="p-2">Estoque</th>
-                        <th className="p-2">Mín.</th>
                         <th className="p-2"></th>
                       </tr>
                     </thead>
                     <tbody>
                       {variants.map((v, i) => (
                         <tr key={i} className="border-t border-stone-100">
-                          <td className="p-1"><Input value={v.size ?? ""} onChange={(e) => setVariants(vs => vs.map((x, j) => j === i ? { ...x, size: e.target.value } : x))} className="h-8" /></td>
-                          <td className="p-1"><Input value={v.color ?? ""} onChange={(e) => setVariants(vs => vs.map((x, j) => j === i ? { ...x, color: e.target.value } : x))} className="h-8" /></td>
-                          <td className="p-1"><Input value={v.model ?? ""} onChange={(e) => setVariants(vs => vs.map((x, j) => j === i ? { ...x, model: e.target.value } : x))} className="h-8" /></td>
-                          <td className="p-1"><Input value={v.sku ?? ""} onChange={(e) => setVariants(vs => vs.map((x, j) => j === i ? { ...x, sku: e.target.value } : x))} className="h-8" /></td>
-                          <td className="p-1"><Input type="number" step="0.01" value={v.price_cents ? v.price_cents / 100 : ""} onChange={(e) => setVariants(vs => vs.map((x, j) => j === i ? { ...x, price_cents: e.target.value ? Math.round(parseFloat(e.target.value) * 100) : null } : x))} className="h-8 w-24" placeholder="usa do produto" /></td>
-                          <td className="p-1"><Input type="number" value={v.stock_qty} onChange={(e) => setVariants(vs => vs.map((x, j) => j === i ? { ...x, stock_qty: parseInt(e.target.value || "0", 10) } : x))} className="h-8 w-20" /></td>
-                          <td className="p-1"><Input type="number" value={v.stock_min} onChange={(e) => setVariants(vs => vs.map((x, j) => j === i ? { ...x, stock_min: parseInt(e.target.value || "0", 10) } : x))} className="h-8 w-20" /></td>
+                          <td className="p-1"><Input value={v.size ?? ""} onChange={(e) => setVariants(vs => vs.map((x, j) => j === i ? { ...x, size: e.target.value } : x))} className="h-8 w-16" /></td>
+                          <td className="p-1"><Input value={v.color ?? ""} onChange={(e) => setVariants(vs => vs.map((x, j) => j === i ? { ...x, color: e.target.value } : x))} className="h-8 w-20" /></td>
+                          <td className="p-1"><Input value={v.model ?? ""} onChange={(e) => setVariants(vs => vs.map((x, j) => j === i ? { ...x, model: e.target.value } : x))} className="h-8 w-20" /></td>
+                          <td className="p-1"><Input value={v.material ?? ""} onChange={(e) => setVariants(vs => vs.map((x, j) => j === i ? { ...x, material: e.target.value } : x))} className="h-8 w-20" /></td>
+                          <td className="p-1"><Input value={v.finish ?? ""} onChange={(e) => setVariants(vs => vs.map((x, j) => j === i ? { ...x, finish: e.target.value } : x))} className="h-8 w-20" /></td>
+                          <td className="p-1"><Input value={v.sku ?? ""} onChange={(e) => setVariants(vs => vs.map((x, j) => j === i ? { ...x, sku: e.target.value } : x))} className="h-8 w-24" /></td>
+                          <td className="p-1"><Input value={v.internal_code ?? ""} onChange={(e) => setVariants(vs => vs.map((x, j) => j === i ? { ...x, internal_code: e.target.value } : x))} className="h-8 w-24" /></td>
+                          <td className="p-1"><Input value={v.barcode ?? ""} onChange={(e) => setVariants(vs => vs.map((x, j) => j === i ? { ...x, barcode: e.target.value } : x))} className="h-8 w-28" /></td>
+                          <td className="p-1"><Input type="number" step="0.01" value={v.price_cents ? v.price_cents / 100 : ""} onChange={(e) => setVariants(vs => vs.map((x, j) => j === i ? { ...x, price_cents: e.target.value ? Math.round(parseFloat(e.target.value) * 100) : null } : x))} className="h-8 w-20" placeholder="—" /></td>
                           <td className="p-1">
                             <Button type="button" size="sm" variant="ghost" onClick={() => setVariants(vs => vs.filter((_, j) => j !== i))}>
                               <Trash2 className="h-4 w-4 text-rose-600" />
@@ -581,24 +594,13 @@ export function ProductForm({ initial }: { initial?: any }) {
           </Card>
         </TabsContent>
 
+        {/* SEO */}
         <TabsContent value="seo">
           <Card>
             <CardContent className="space-y-4 pt-6">
               <Field label="Meta title"><Input {...form.register("seo_title")} maxLength={200} /></Field>
               <Field label="Meta description"><Textarea rows={3} {...form.register("seo_description")} maxLength={500} /></Field>
               <Field label="Keywords"><Input {...form.register("seo_keywords")} /></Field>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="flags">
-          <Card>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-6">
-              <Flag label="Produto ativo (visível no site)" name="is_active" form={form} />
-              <Flag label="Em destaque" name="is_featured" form={form} />
-              <Flag label="Lançamento (aparece em Novidades)" name="is_launch" form={form} />
-              <Flag label="Em promoção (aparece em Promoção)" name="is_on_sale" form={form} />
-              <Flag label="Mais vendido" name="is_bestseller" form={form} />
             </CardContent>
           </Card>
         </TabsContent>

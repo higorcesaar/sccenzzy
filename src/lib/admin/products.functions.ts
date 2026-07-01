@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireAdmin } from "./admin-guard";
 
+// Schema comercial: campos de estoque foram removidos — controlados pelo módulo Estoque.
 const productSchema = z.object({
   id: z.string().uuid().optional(),
   name: z.string().min(1, "Nome é obrigatório").max(200),
@@ -9,9 +10,13 @@ const productSchema = z.object({
   category_id: z.string().uuid().optional().nullable(),
   subcategory_id: z.string().uuid().optional().nullable(),
   collection_id: z.string().uuid().optional().nullable(),
+  brand_id: z.string().uuid().optional().nullable(),
   sku: z.string().max(60).optional().nullable(),
   internal_code: z.string().max(60).optional().nullable(),
   brand: z.string().max(80).optional().nullable(),
+  gender: z.string().max(30).optional().nullable(),
+  material: z.string().max(120).optional().nullable(),
+  specifications: z.string().max(3000).optional().nullable(),
   short_description: z.string().max(500).optional().nullable(),
   description: z.string().max(5000).optional().nullable(),
   price_cents: z.number().int().min(0),
@@ -21,6 +26,7 @@ const productSchema = z.object({
   width_cm: z.number().min(0).optional().nullable(),
   height_cm: z.number().min(0).optional().nullable(),
   depth_cm: z.number().min(0).optional().nullable(),
+  length_cm: z.number().min(0).optional().nullable(),
   seo_title: z.string().max(200).optional().nullable(),
   seo_description: z.string().max(500).optional().nullable(),
   seo_keywords: z.string().max(500).optional().nullable(),
@@ -30,9 +36,8 @@ const productSchema = z.object({
   is_launch: z.boolean().default(false),
   is_on_sale: z.boolean().default(false),
   is_bestseller: z.boolean().default(false),
+  is_exclusive: z.boolean().default(false),
   has_variants: z.boolean().default(false),
-  stock_qty: z.number().int().min(0).default(0),
-  stock_min: z.number().int().min(0).default(0),
   sort_order: z.number().int().min(0).default(0),
   tags: z.array(z.string().max(40)).max(20).optional().nullable(),
   images: z.array(z.string().min(1).max(500)).max(20).optional().nullable(),
@@ -93,7 +98,7 @@ export const upsertProduct = createServerFn({ method: "POST" })
   .middleware([requireAdmin])
   .inputValidator((input: unknown) => productSchema.parse(input))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context as any;
+    const { supabase } = context as any;
     const payload: any = { ...data };
     const images = payload.images;
     delete payload.images;
@@ -116,26 +121,12 @@ export const upsertProduct = createServerFn({ method: "POST" })
       payload.slug = candidate;
     }
 
-    const requestedStock = Number(payload.stock_qty ?? 0);
-    let row: any;
-    let stockDelta = 0;
-    let movementType: "entrada" | "ajuste" | null = null;
+    // Estoque não é mais controlado aqui — remove qualquer resquício.
+    delete payload.stock_qty;
+    delete payload.stock_min;
 
+    let row: any;
     if (data.id) {
-      const { data: prev } = await supabase
-        .from("scz_products")
-        .select("stock_qty,has_variants")
-        .eq("id", data.id)
-        .maybeSingle();
-      const prevStock = Number(prev?.stock_qty ?? 0);
-      // If product has variants, stock_qty is derived — don't touch via product form
-      if (prev?.has_variants) {
-        delete payload.stock_qty;
-      } else {
-        stockDelta = requestedStock - prevStock;
-        delete payload.stock_qty;
-        if (stockDelta !== 0) movementType = "ajuste";
-      }
       const { data: updated, error } = await supabase
         .from("scz_products")
         .update(payload)
@@ -145,34 +136,9 @@ export const upsertProduct = createServerFn({ method: "POST" })
       if (error) throw new Error(error.message);
       row = updated;
     } else {
-      payload.stock_qty = 0;
       const { data: inserted, error } = await supabase.from("scz_products").insert(payload).select().single();
       if (error) throw new Error(error.message);
       row = inserted;
-      if (requestedStock > 0 && !payload.has_variants) {
-        stockDelta = requestedStock;
-        movementType = "entrada";
-      }
-    }
-
-    if (movementType && stockDelta !== 0) {
-      const signedQty = movementType === "ajuste" ? stockDelta : Math.abs(stockDelta);
-      const reason =
-        movementType === "entrada"
-          ? "Estoque inicial cadastrado no produto"
-          : stockDelta > 0
-          ? "Ajuste positivo via cadastro de produto"
-          : "Ajuste negativo via cadastro de produto";
-      const { error: mErr } = await supabase.from("scz_stock_movements").insert({
-        product_id: row.id,
-        movement_type: movementType,
-        quantity: signedQty,
-        reason,
-        user_id: userId,
-      });
-      if (mErr) console.warn("Stock movement insert failed:", mErr.message);
-      const { data: fresh } = await supabase.from("scz_products").select("*").eq("id", row.id).maybeSingle();
-      if (fresh) row = fresh;
     }
 
     if (Array.isArray(images)) {

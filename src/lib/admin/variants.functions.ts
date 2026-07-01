@@ -2,18 +2,22 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireAdmin } from "./admin-guard";
 
+// Variações: apenas identificação. Estoque é gerenciado no módulo Estoque.
 const variantSchema = z.object({
   id: z.string().uuid().optional(),
   sku: z.string().max(60).optional().nullable(),
+  internal_code: z.string().max(60).optional().nullable(),
   size: z.string().max(40).optional().nullable(),
   color: z.string().max(40).optional().nullable(),
   color_hex: z.string().max(20).optional().nullable(),
   model: z.string().max(40).optional().nullable(),
+  material: z.string().max(80).optional().nullable(),
+  finish: z.string().max(80).optional().nullable(),
   barcode: z.string().max(60).optional().nullable(),
   price_cents: z.number().int().min(0).optional().nullable(),
   promo_price: z.number().min(0).optional().nullable(),
-  stock_qty: z.number().int().min(0).default(0),
-  stock_min: z.number().int().min(0).default(0),
+  weight_g: z.number().int().min(0).optional().nullable(),
+  image_url: z.string().max(500).optional().nullable(),
   is_active: z.boolean().default(true),
   sort_order: z.number().int().min(0).default(0),
 });
@@ -41,67 +45,31 @@ export const syncProductVariants = createServerFn({ method: "POST" })
   .middleware([requireAdmin])
   .inputValidator((i: unknown) => syncSchema.parse(i))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context as any;
+    const { supabase } = context as any;
 
     const { data: existing } = await supabase
       .from("scz_product_variants")
-      .select("id,stock_qty")
+      .select("id")
       .eq("product_id", data.product_id);
 
     const existingIds = new Set<string>((existing ?? []).map((v: any) => v.id as string));
     const sentIds = new Set<string>(data.variants.filter((v) => v.id).map((v) => v.id as string));
 
-    // Delete removed variants
     const toDelete = [...existingIds].filter((id) => !sentIds.has(id));
     if (toDelete.length > 0) {
       await supabase.from("scz_product_variants").delete().in("id", toDelete);
     }
 
-    const stockByExisting = Object.fromEntries((existing ?? []).map((v: any) => [v.id, v.stock_qty]));
-
-    // Upsert each
     for (const v of data.variants) {
       const payload: any = { ...v, product_id: data.product_id };
-      // strip stock_qty from update — trigger applies movements
       if (v.id) {
-        const requested = Number(v.stock_qty ?? 0);
-        const prev = Number(stockByExisting[v.id] ?? 0);
-        const delta = requested - prev;
-        const { stock_qty, ...rest } = payload;
-        await supabase.from("scz_product_variants").update(rest).eq("id", v.id);
-        if (delta !== 0) {
-          await supabase.from("scz_stock_movements").insert({
-            product_id: data.product_id,
-            variant_id: v.id,
-            movement_type: "ajuste",
-            quantity: delta,
-            reason: "Ajuste via cadastro de variação",
-            user_id: userId,
-          });
-        }
+        await supabase.from("scz_product_variants").update(payload).eq("id", v.id);
       } else {
-        const requested = Number(v.stock_qty ?? 0);
-        payload.stock_qty = 0;
-        const { data: created, error } = await supabase
-          .from("scz_product_variants")
-          .insert(payload)
-          .select()
-          .single();
+        const { error } = await supabase.from("scz_product_variants").insert(payload);
         if (error) throw new Error(error.message);
-        if (requested > 0) {
-          await supabase.from("scz_stock_movements").insert({
-            product_id: data.product_id,
-            variant_id: created.id,
-            movement_type: "entrada",
-            quantity: requested,
-            reason: "Estoque inicial da variação",
-            user_id: userId,
-          });
-        }
       }
     }
 
-    // Mark product as having variants
     await supabase
       .from("scz_products")
       .update({ has_variants: data.variants.length > 0 })
