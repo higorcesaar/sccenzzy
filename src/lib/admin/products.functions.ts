@@ -98,7 +98,7 @@ export const upsertProduct = createServerFn({ method: "POST" })
   .middleware([requireAdmin])
   .inputValidator((input: unknown) => productSchema.parse(input))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context as any;
+    const { supabase } = context as any;
     const payload: any = { ...data };
     const images = payload.images;
     delete payload.images;
@@ -121,26 +121,12 @@ export const upsertProduct = createServerFn({ method: "POST" })
       payload.slug = candidate;
     }
 
-    const requestedStock = Number(payload.stock_qty ?? 0);
-    let row: any;
-    let stockDelta = 0;
-    let movementType: "entrada" | "ajuste" | null = null;
+    // Estoque não é mais controlado aqui — remove qualquer resquício.
+    delete payload.stock_qty;
+    delete payload.stock_min;
 
+    let row: any;
     if (data.id) {
-      const { data: prev } = await supabase
-        .from("scz_products")
-        .select("stock_qty,has_variants")
-        .eq("id", data.id)
-        .maybeSingle();
-      const prevStock = Number(prev?.stock_qty ?? 0);
-      // If product has variants, stock_qty is derived — don't touch via product form
-      if (prev?.has_variants) {
-        delete payload.stock_qty;
-      } else {
-        stockDelta = requestedStock - prevStock;
-        delete payload.stock_qty;
-        if (stockDelta !== 0) movementType = "ajuste";
-      }
       const { data: updated, error } = await supabase
         .from("scz_products")
         .update(payload)
@@ -150,34 +136,9 @@ export const upsertProduct = createServerFn({ method: "POST" })
       if (error) throw new Error(error.message);
       row = updated;
     } else {
-      payload.stock_qty = 0;
       const { data: inserted, error } = await supabase.from("scz_products").insert(payload).select().single();
       if (error) throw new Error(error.message);
       row = inserted;
-      if (requestedStock > 0 && !payload.has_variants) {
-        stockDelta = requestedStock;
-        movementType = "entrada";
-      }
-    }
-
-    if (movementType && stockDelta !== 0) {
-      const signedQty = movementType === "ajuste" ? stockDelta : Math.abs(stockDelta);
-      const reason =
-        movementType === "entrada"
-          ? "Estoque inicial cadastrado no produto"
-          : stockDelta > 0
-          ? "Ajuste positivo via cadastro de produto"
-          : "Ajuste negativo via cadastro de produto";
-      const { error: mErr } = await supabase.from("scz_stock_movements").insert({
-        product_id: row.id,
-        movement_type: movementType,
-        quantity: signedQty,
-        reason,
-        user_id: userId,
-      });
-      if (mErr) console.warn("Stock movement insert failed:", mErr.message);
-      const { data: fresh } = await supabase.from("scz_products").select("*").eq("id", row.id).maybeSingle();
-      if (fresh) row = fresh;
     }
 
     if (Array.isArray(images)) {
