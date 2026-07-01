@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireAdmin } from "./admin-guard";
 
+// Schema comercial: campos de estoque foram removidos — controlados pelo módulo Estoque.
 const productSchema = z.object({
   id: z.string().uuid().optional(),
   name: z.string().min(1, "Nome é obrigatório").max(200),
@@ -9,9 +10,13 @@ const productSchema = z.object({
   category_id: z.string().uuid().optional().nullable(),
   subcategory_id: z.string().uuid().optional().nullable(),
   collection_id: z.string().uuid().optional().nullable(),
+  brand_id: z.string().uuid().optional().nullable(),
   sku: z.string().max(60).optional().nullable(),
   internal_code: z.string().max(60).optional().nullable(),
   brand: z.string().max(80).optional().nullable(),
+  gender: z.string().max(30).optional().nullable(),
+  material: z.string().max(120).optional().nullable(),
+  specifications: z.string().max(3000).optional().nullable(),
   short_description: z.string().max(500).optional().nullable(),
   description: z.string().max(5000).optional().nullable(),
   price_cents: z.number().int().min(0),
@@ -21,6 +26,7 @@ const productSchema = z.object({
   width_cm: z.number().min(0).optional().nullable(),
   height_cm: z.number().min(0).optional().nullable(),
   depth_cm: z.number().min(0).optional().nullable(),
+  length_cm: z.number().min(0).optional().nullable(),
   seo_title: z.string().max(200).optional().nullable(),
   seo_description: z.string().max(500).optional().nullable(),
   seo_keywords: z.string().max(500).optional().nullable(),
@@ -30,9 +36,8 @@ const productSchema = z.object({
   is_launch: z.boolean().default(false),
   is_on_sale: z.boolean().default(false),
   is_bestseller: z.boolean().default(false),
+  is_exclusive: z.boolean().default(false),
   has_variants: z.boolean().default(false),
-  stock_qty: z.number().int().min(0).default(0),
-  stock_min: z.number().int().min(0).default(0),
   sort_order: z.number().int().min(0).default(0),
   tags: z.array(z.string().max(40)).max(20).optional().nullable(),
   images: z.array(z.string().min(1).max(500)).max(20).optional().nullable(),
