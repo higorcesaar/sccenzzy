@@ -135,19 +135,7 @@ function ProductsListPage() {
                       </div>
                     )}
                   </TableCell>
-                  <TableCell>
-                    <span
-                      className={
-                        p.stock_qty === 0
-                          ? "text-rose-600 font-semibold"
-                          : p.stock_min > 0 && p.stock_qty <= p.stock_min
-                          ? "text-amber-600 font-semibold"
-                          : "text-stone-700"
-                      }
-                    >
-                      {p.stock_qty}
-                    </span>
-                  </TableCell>
+
                   <TableCell>
                     <div className="flex flex-wrap items-center gap-1">
                       <Switch
