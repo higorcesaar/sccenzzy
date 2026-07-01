@@ -488,3 +488,137 @@ export const deleteBrand = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// ============================================================
+// CONEXÃO DE ESTOQUE COM PRODUTOS (EDIÇÃO UNIFICADA)
+// ============================================================
+const syncStockItemSchema = z.object({
+  variant_id: z.string().uuid().optional().nullable(),
+  size: z.string().optional().nullable(),
+  color: z.string().optional().nullable(),
+  location_id: z.string().uuid(),
+  qty: z.number().int().min(0),
+  min_qty: z.number().int().min(0),
+  location_label: z.string().max(200).optional().nullable(),
+});
+
+const syncStockSchema = z.object({
+  product_id: z.string().uuid(),
+  stockItems: z.array(syncStockItemSchema),
+});
+
+export const getProductStock = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((i: { product_id: string }) => i)
+  .handler(async ({ data, context }) => {
+    const { supabase } = context as any;
+    const { data: rows, error } = await supabase
+      .from("scz_stock")
+      .select("*")
+      .eq("product_id", data.product_id);
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
+export const syncProductStock = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((i: unknown) => syncStockSchema.parse(i))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context as any;
+
+    // Busca registros atuais de estoque do produto
+    const { data: existing, error: fetchErr } = await supabase
+      .from("scz_stock")
+      .select("*")
+      .eq("product_id", data.product_id);
+    if (fetchErr) throw new Error(fetchErr.message);
+
+    const existingMap = new Map<string, any>();
+    for (const row of existing ?? []) {
+      const key = `${row.location_id}_${row.variant_id ?? "null"}`;
+      existingMap.set(key, row);
+    }
+
+    // Busca variantes cadastradas para resolver IDs de variantes novas
+    const { data: dbVariants } = await supabase
+      .from("scz_product_variants")
+      .select("id, size, color")
+      .eq("product_id", data.product_id);
+
+    const matchVariantId = (size?: string | null, color?: string | null) => {
+      if (!size && !color) return null;
+      const match = (dbVariants ?? []).find(
+        (v: any) =>
+          (v.size || null) === (size || null) && (v.color || null) === (color || null)
+      );
+      return match ? match.id : null;
+    };
+
+    for (const item of data.stockItems) {
+      let resolvedVariantId = item.variant_id;
+      if (!resolvedVariantId && (item.size || item.color)) {
+        resolvedVariantId = matchVariantId(item.size, item.color);
+      }
+
+      const key = `${item.location_id}_${resolvedVariantId ?? "null"}`;
+      const current = existingMap.get(key);
+
+      if (current) {
+        const delta = item.qty - current.qty;
+        if (delta !== 0) {
+          const { error: moveErr } = await supabase.from("scz_stock_movements").insert({
+            product_id: data.product_id,
+            variant_id: resolvedVariantId ?? null,
+            location_id: item.location_id,
+            movement_type: "ajuste",
+            quantity: delta,
+            reason: "Ajuste manual via formulário de produto",
+            user_id: userId,
+          });
+          if (moveErr) throw new Error(moveErr.message);
+        }
+
+        if (item.min_qty !== current.min_qty || item.location_label !== current.location_label) {
+          const { error: updErr } = await supabase
+            .from("scz_stock")
+            .update({
+              min_qty: item.min_qty,
+              location_label: item.location_label,
+            })
+            .eq("id", current.id);
+          if (updErr) throw new Error(updErr.message);
+        }
+      } else {
+        // Insere o estoque padrão e aplica a movimentação inicial se maior que zero
+        const { data: newRow, error: insErr } = await supabase
+          .from("scz_stock")
+          .insert({
+            product_id: data.product_id,
+            variant_id: resolvedVariantId ?? null,
+            location_id: item.location_id,
+            qty: 0,
+            min_qty: item.min_qty,
+            location_label: item.location_label,
+          })
+          .select()
+          .single();
+        if (insErr) throw new Error(insErr.message);
+
+        if (item.qty > 0) {
+          const { error: moveErr } = await supabase.from("scz_stock_movements").insert({
+            product_id: data.product_id,
+            variant_id: resolvedVariantId ?? null,
+            location_id: item.location_id,
+            movement_type: "entrada",
+            quantity: item.qty,
+            reason: "Saldo inicial via formulário de produto",
+            user_id: userId,
+          });
+          if (moveErr) throw new Error(moveErr.message);
+        }
+      }
+    }
+
+    return { ok: true };
+  });
+

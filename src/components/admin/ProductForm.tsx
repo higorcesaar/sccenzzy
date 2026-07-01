@@ -14,7 +14,7 @@ import {
   duplicateProduct,
 } from "@/lib/admin/products.functions";
 import { listVariants, syncProductVariants } from "@/lib/admin/variants.functions";
-import { listBrands } from "@/lib/admin/stock-erp.functions";
+import { listBrands, listLocations, getProductStock, syncProductStock } from "@/lib/admin/stock-erp.functions";
 import { uploadProductMedia } from "@/lib/r2.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +24,13 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Upload, X, Save, Copy, Plus, Trash2, ArrowUp, ArrowDown, Star, Info } from "lucide-react";
+import { Loader2, Upload, X, Save, Copy, Plus, Trash2, ArrowUp, ArrowDown, Star, Info, Warehouse } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const schema = z.object({
   name: z.string().min(1, "Informe o nome do produto"),
@@ -93,10 +99,14 @@ export function ProductForm({ initial }: { initial?: any }) {
   const fetchVariants = useServerFn(listVariants);
   const saveVariants = useServerFn(syncProductVariants);
   const dup = useServerFn(duplicateProduct);
+  const fetchLocations = useServerFn(listLocations);
+  const fetchStock = useServerFn(getProductStock);
+  const saveStock = useServerFn(syncProductStock);
 
   const { data: categories } = useQuery({ queryKey: ["admin", "categories-select"], queryFn: () => fetchCategories() });
   const { data: collections } = useQuery({ queryKey: ["admin", "collections-select"], queryFn: () => fetchCollections() });
   const { data: brands } = useQuery({ queryKey: ["admin", "brands-select"], queryFn: () => fetchBrands() });
+  const { data: locations } = useQuery({ queryKey: ["admin", "locations-select"], queryFn: () => fetchLocations() });
 
   const { data: existingImages } = useQuery({
     queryKey: ["admin", "product-images", initial?.id],
@@ -110,11 +120,130 @@ export function ProductForm({ initial }: { initial?: any }) {
     enabled: !!initial?.id,
   });
 
+  const { data: existingStock } = useQuery({
+    queryKey: ["admin", "product-stock", initial?.id],
+    queryFn: () => fetchStock({ data: { product_id: initial.id } }),
+    enabled: !!initial?.id,
+  });
+
   const [images, setImages] = useState<string[]>([]);
   const [variants, setVariants] = useState<Variant[]>([]);
   const [uploading, setUploading] = useState(false);
   const imagesHydrated = useRef(false);
   const variantsHydrated = useRef(false);
+
+  const [stockItems, setStockItems] = useState<Array<{
+    variant_id?: string | null;
+    size?: string | null;
+    color?: string | null;
+    location_id: string;
+    qty: number;
+    min_qty: number;
+    location_label: string | null;
+  }>>([]);
+  const stockHydrated = useRef(false);
+  const [activeStockVariant, setActiveStockVariant] = useState<Variant | null>(null);
+
+  // Hidratação do estoque
+  useEffect(() => {
+    if (!stockHydrated.current && existingStock && locations && (!initial?.has_variants || existingVariants)) {
+      const items: any[] = [];
+      if (initial?.has_variants && existingVariants) {
+        for (const loc of locations) {
+          for (const variant of existingVariants as any[]) {
+            const current = existingStock.find(
+              (s: any) => s.location_id === loc.id && s.variant_id === variant.id
+            );
+            items.push({
+              variant_id: variant.id,
+              size: variant.size,
+              color: variant.color,
+              location_id: loc.id,
+              qty: current?.qty ?? 0,
+              min_qty: current?.min_qty ?? 0,
+              location_label: current?.location_label ?? "",
+            });
+          }
+        }
+      } else if (!initial?.has_variants) {
+        for (const loc of locations) {
+          const current = existingStock.find(
+            (s: any) => s.location_id === loc.id && !s.variant_id
+          );
+          items.push({
+            variant_id: null,
+            location_id: loc.id,
+            qty: current?.qty ?? 0,
+            min_qty: current?.min_qty ?? 0,
+            location_label: current?.location_label ?? "",
+          });
+        }
+      }
+      setStockItems(items);
+      stockHydrated.current = true;
+    }
+  }, [existingStock, locations, existingVariants, initial]);
+
+  const getStockItem = (locationId: string, variant?: Variant | null) => {
+    if (!variant) {
+      return stockItems.find(item => item.location_id === locationId && !item.variant_id && !item.size && !item.color) || {
+        qty: 0,
+        min_qty: 0,
+        location_label: "",
+      };
+    }
+    return stockItems.find(item => 
+      item.location_id === locationId && 
+      ((variant.id && item.variant_id === variant.id) || 
+       (!variant.id && item.size === variant.size && item.color === variant.color))
+    ) || {
+      qty: 0,
+      min_qty: 0,
+      location_label: "",
+    };
+  };
+
+  const updateStockItem = (locationId: string, qty: number, minQty: number, label: string, variant?: Variant | null) => {
+    setStockItems(prev => {
+      const next = [...prev];
+      let idx = -1;
+      if (!variant) {
+        idx = next.findIndex(item => item.location_id === locationId && !item.variant_id && !item.size && !item.color);
+      } else {
+        idx = next.findIndex(item => 
+          item.location_id === locationId && 
+          ((variant.id && item.variant_id === variant.id) || 
+           (!variant.id && item.size === variant.size && item.color === variant.color))
+        );
+      }
+
+      const newItem = {
+        location_id: locationId,
+        variant_id: variant?.id || null,
+        size: variant?.size || null,
+        color: variant?.color || null,
+        qty,
+        min_qty: minQty,
+        location_label: label || null,
+      };
+
+      if (idx > -1) {
+        next[idx] = newItem;
+      } else {
+        next.push(newItem);
+      }
+      return next;
+    });
+  };
+
+  const getVariantTotalStock = (variant: Variant) => {
+    return stockItems
+      .filter(item => 
+        ((variant.id && item.variant_id === variant.id) || 
+         (!variant.id && item.size === variant.size && item.color === variant.color))
+      )
+      .reduce((sum, item) => sum + item.qty, 0);
+  };
 
   useEffect(() => {
     if (!imagesHydrated.current && existingImages) {
@@ -264,11 +393,46 @@ export function ProductForm({ initial }: { initial?: any }) {
       if (v.has_variants) {
         await saveVariants({ data: { product_id: product.id, variants } });
       }
+
+      // Prepara itens de estoque para salvar
+      const payloadStock: any[] = [];
+      const activeLocs = locations ?? [];
+      
+      if (!v.has_variants) {
+        for (const loc of activeLocs) {
+          const item = getStockItem(loc.id);
+          payloadStock.push({
+            location_id: loc.id,
+            variant_id: null,
+            qty: item.qty ?? 0,
+            min_qty: item.min_qty ?? 0,
+            location_label: item.location_label || null,
+          });
+        }
+      } else {
+        for (const variant of variants) {
+          for (const loc of activeLocs) {
+            const item = getStockItem(loc.id, variant);
+            payloadStock.push({
+              location_id: loc.id,
+              variant_id: variant.id || null,
+              size: variant.size || null,
+              color: variant.color || null,
+              qty: item.qty ?? 0,
+              min_qty: item.min_qty ?? 0,
+              location_label: item.location_label || null,
+            });
+          }
+        }
+      }
+
+      await saveStock({ data: { product_id: product.id, stockItems: payloadStock } });
       return product;
     },
     onSuccess: (row: any) => {
       toast.success("Produto salvo e publicado na loja");
       qc.invalidateQueries({ queryKey: ["admin", "products"] });
+      qc.invalidateQueries({ queryKey: ["admin", "product-stock", row.id] });
       qc.invalidateQueries({ queryKey: ["public-products"] });
       qc.invalidateQueries({ queryKey: ["public-categories"] });
       if (!initial?.id) navigate({ to: "/admin/produtos/$id", params: { id: row.id } });
@@ -336,9 +500,7 @@ export function ProductForm({ initial }: { initial?: any }) {
       <div className="rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-900 p-3 flex gap-2">
         <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
         <p>
-          <strong>Novo fluxo:</strong> este formulário cadastra apenas informações comerciais do produto. Todo o
-          controle de estoque (entrada, saída, ajustes, transferências, inventário) agora fica no módulo{" "}
-          <strong>Estoque</strong> no menu lateral.
+          <strong>Novo fluxo:</strong> este formulário cadastra as informações comerciais do produto e permite configurar diretamente o estoque de cada local e variação. Histórico detalhado de movimentações pode ser consultado no módulo <strong>Estoque</strong> no menu lateral.
         </p>
       </div>
 
@@ -348,6 +510,7 @@ export function ProductForm({ initial }: { initial?: any }) {
           <TabsTrigger value="midia">Mídias</TabsTrigger>
           <TabsTrigger value="venda">Venda</TabsTrigger>
           <TabsTrigger value="variacoes">Variações</TabsTrigger>
+          <TabsTrigger value="estoque">Estoque</TabsTrigger>
           <TabsTrigger value="seo">SEO</TabsTrigger>
         </TabsList>
 
@@ -588,6 +751,192 @@ export function ProductForm({ initial }: { initial?: any }) {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ESTOQUE */}
+        <TabsContent value="estoque">
+          <Card>
+            <CardContent className="space-y-4 pt-6">
+              <div className="rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900 p-3 flex gap-2">
+                <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                <p>
+                  <strong>Configuração Direta de Estoque:</strong> defina os saldos iniciais ou de ajuste,
+                  estoque mínimo e localização física para este produto e suas variações em cada local. Os
+                  ajustes de quantidade serão gravados automaticamente no histórico de movimentações.
+                </p>
+              </div>
+
+              {!hasVariants ? (
+                // Produto Simples
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-stone-50 text-left text-xs uppercase tracking-wider">
+                      <tr>
+                        <th className="p-3">Local de Estoque</th>
+                        <th className="p-3">Quantidade</th>
+                        <th className="p-3">Estoque Mínimo</th>
+                        <th className="p-3">Localização Física (Gôndola / Corredor)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(locations ?? []).map((loc: any) => {
+                        const item = getStockItem(loc.id);
+                        return (
+                          <tr key={loc.id} className="border-t border-stone-100">
+                            <td className="p-3 font-medium text-stone-700">{loc.name}</td>
+                            <td className="p-3">
+                              <Input 
+                                type="number" 
+                                value={item.qty} 
+                                onChange={(e) => updateStockItem(loc.id, Number(e.target.value), item.min_qty, item.location_label || "")} 
+                                className="h-9 w-28" 
+                                min={0}
+                              />
+                            </td>
+                            <td className="p-3">
+                              <Input 
+                                type="number" 
+                                value={item.min_qty} 
+                                onChange={(e) => updateStockItem(loc.id, item.qty, Number(e.target.value), item.location_label || "")} 
+                                className="h-9 w-28" 
+                                min={0}
+                              />
+                            </td>
+                            <td className="p-3">
+                              <Input 
+                                value={item.location_label || ""} 
+                                onChange={(e) => updateStockItem(loc.id, item.qty, item.min_qty, e.target.value)} 
+                                placeholder="Ex: Corredor A / Prateleira 3" 
+                                className="h-9 w-full"
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                // Produto com Variações
+                <div className="space-y-4">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-stone-50 text-left text-xs uppercase tracking-wider">
+                        <tr>
+                          <th className="p-3">Variação</th>
+                          <th className="p-3">SKU</th>
+                          <th className="p-3">Estoque Total (Físico)</th>
+                          <th className="p-3 text-right">Ação</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {variants.map((v, i) => {
+                          const totalStock = getVariantTotalStock(v);
+                          return (
+                            <tr key={i} className="border-t border-stone-100">
+                              <td className="p-3">
+                                <span className="font-semibold text-stone-900">
+                                  {v.size ? `Tamanho: ${v.size}` : "Único"}
+                                </span>
+                                {v.color && (
+                                  <span className="text-stone-500 text-xs ml-2">
+                                    ({v.color})
+                                  </span>
+                                )}
+                              </td>
+                              <td className="p-3 text-xs text-stone-600 font-mono">{v.sku || "—"}</td>
+                              <td className="p-3">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${totalStock === 0 ? "bg-rose-100 text-rose-800" : "bg-emerald-100 text-emerald-800"}`}>
+                                  {totalStock} un
+                                </span>
+                              </td>
+                              <td className="p-3 text-right">
+                                <Button 
+                                  type="button" 
+                                  size="sm" 
+                                  variant="outline" 
+                                  onClick={() => setActiveStockVariant(v)}
+                                  className="flex items-center gap-1.5 ml-auto"
+                                >
+                                  <Warehouse className="h-3.5 w-3.5" />
+                                  Gerenciar Estoque
+                                </Button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Modal de Gerenciamento de Estoque por Variação */}
+                  <Dialog open={!!activeStockVariant} onOpenChange={(open) => !open && setActiveStockVariant(null)}>
+                    <DialogContent className="max-w-2xl bg-white">
+                      <DialogHeader>
+                        <DialogTitle className="font-serif text-lg">
+                          Gerenciar Estoque da Variação: {activeStockVariant ? `${activeStockVariant.size ?? 'Único'} ${activeStockVariant.color ? `· ${activeStockVariant.color}` : ''}` : ''}
+                        </DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 py-2">
+                        <table className="w-full text-sm">
+                          <thead className="bg-stone-50 text-left text-xs uppercase tracking-wider">
+                            <tr>
+                              <th className="p-2">Local</th>
+                              <th className="p-2">Quantidade</th>
+                              <th className="p-2">Mínimo</th>
+                              <th className="p-2">Localização Física</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(locations ?? []).map((loc: any) => {
+                              if (!activeStockVariant) return null;
+                              const item = getStockItem(loc.id, activeStockVariant);
+                              return (
+                                <tr key={loc.id} className="border-t border-stone-100">
+                                  <td className="p-2 font-medium text-stone-700 text-xs">{loc.name}</td>
+                                  <td className="p-2">
+                                    <Input 
+                                      type="number" 
+                                      value={item.qty} 
+                                      onChange={(e) => updateStockItem(loc.id, Number(e.target.value), item.min_qty, item.location_label || "", activeStockVariant)} 
+                                      className="h-8 w-20" 
+                                      min={0}
+                                    />
+                                  </td>
+                                  <td className="p-2">
+                                    <Input 
+                                      type="number" 
+                                      value={item.min_qty} 
+                                      onChange={(e) => updateStockItem(loc.id, item.qty, Number(e.target.value), item.location_label || "", activeStockVariant)} 
+                                      className="h-8 w-20" 
+                                      min={0}
+                                    />
+                                  </td>
+                                  <td className="p-2">
+                                    <Input 
+                                      value={item.location_label || ""} 
+                                      onChange={(e) => updateStockItem(loc.id, item.qty, item.min_qty, e.target.value, activeStockVariant)} 
+                                      placeholder="Ex: Prateleira 4" 
+                                      className="h-8 w-full"
+                                    />
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                        <div className="flex justify-end pt-2">
+                          <Button type="button" onClick={() => setActiveStockVariant(null)} className="bg-amber-600 hover:bg-amber-700">
+                            Confirmar
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </div>
               )}
             </CardContent>
