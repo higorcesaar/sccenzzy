@@ -957,18 +957,16 @@ export function ProductForm({ initial }: { initial?: any }) {
         </TabsContent>
       </Tabs>
     </form>
-    <>
-      {/* Save confirmation dialog */}
-      <Dialog open={savedOpen} onOpenChange={setSavedOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Salvo</DialogTitle>
-          </DialogHeader>
-          <p>Produto salvo com sucesso.</p>
-          <Button onClick={() => setSavedOpen(false)}>Fechar</Button>
-        </DialogContent>
-      </Dialog>
-    </>
+    {/* Save confirmation dialog */}
+    <Dialog open={savedOpen} onOpenChange={setSavedOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Salvo</DialogTitle>
+        </DialogHeader>
+        <p>Produto salvo com sucesso.</p>
+        <Button onClick={() => setSavedOpen(false)}>Fechar</Button>
+      </DialogContent>
+    </Dialog>
   );
 }
 
