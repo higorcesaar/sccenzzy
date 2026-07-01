@@ -115,7 +115,6 @@ function ProductsListPage() {
                 <TableHead>Produto</TableHead>
                 <TableHead>SKU</TableHead>
                 <TableHead>Preço</TableHead>
-                <TableHead>Estoque</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>

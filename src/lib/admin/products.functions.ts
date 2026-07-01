@@ -66,8 +66,8 @@ export const listProducts = createServerFn({ method: "POST" })
     let q = supabase
       .from("scz_products")
       .select(
-        "id,name,slug,sku,brand,price_cents,promo_price,stock_qty,stock_min,is_active,is_featured,is_on_sale,has_variants,sort_order,updated_at,category_id,collection_id",
-        { count: "exact" },
+        "id,name,slug,sku,brand,price_cents,promo_price,is_active,is_featured,is_on_sale,has_variants,sort_order,updated_at,category_id,collection_id",
+        { count: "exact" }
       )
       .order("sort_order")
       .order("updated_at", { ascending: false })
@@ -183,7 +183,7 @@ export const duplicateProduct = createServerFn({ method: "POST" })
     const { id, created_at, updated_at, slug, name, ...rest } = src;
     const newName = `${name} (cópia)`;
     let candidate = `${slugify(newName)}-${Date.now().toString(36)}`;
-    const payload: any = { ...rest, name: newName, slug: candidate, is_active: false, stock_qty: 0, stock_sold: 0, stock_reserved: 0 };
+    const payload: any = { ...rest, name: newName, slug: candidate, is_active: false };
 
     const { data: created, error: e2 } = await supabase.from("scz_products").insert(payload).select().single();
     if (e2) throw new Error(e2.message);
