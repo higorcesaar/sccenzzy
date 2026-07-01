@@ -350,6 +350,7 @@ export function ProductForm({ initial }: { initial?: any }) {
     },
   });
 
+  const [savedOpen, setSavedOpen] = useState(false);
   const mut = useMutation({
     mutationFn: async (v: FormValues) => {
       const payload: any = {
@@ -370,7 +371,7 @@ export function ProductForm({ initial }: { initial?: any }) {
         description: v.description || null,
         price_cents: Math.round(v.price_brl * 100),
         cost_price: v.cost_price ?? null,
-        promo_price: v.promo_price ?? null,
+        promo_price: v.promo_price ? Math.round(v.promo_price * 100) : null,
         weight_g: v.weight_g ?? null,
         width_cm: v.width_cm ?? null,
         height_cm: v.height_cm ?? null,
@@ -431,6 +432,7 @@ export function ProductForm({ initial }: { initial?: any }) {
     },
     onSuccess: (row: any) => {
       toast.success("Produto salvo e publicado na loja");
+      setSavedOpen(true);
       qc.invalidateQueries({ queryKey: ["admin", "products"] });
       qc.invalidateQueries({ queryKey: ["admin", "product-stock", row.id] });
       qc.invalidateQueries({ queryKey: ["public-products"] });
@@ -955,6 +957,16 @@ export function ProductForm({ initial }: { initial?: any }) {
         </TabsContent>
       </Tabs>
     </form>
+    {/* Save confirmation dialog */}
+    <Dialog open={savedOpen} onOpenChange={setSavedOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Salvo</DialogTitle>
+        </DialogHeader>
+        <p>Produto salvo com sucesso.</p>
+        <Button onClick={() => setSavedOpen(false)}>Fechar</Button>
+      </DialogContent>
+    </Dialog>
   );
 }
 
