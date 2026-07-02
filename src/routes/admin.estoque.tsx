@@ -191,8 +191,10 @@ function StockPage() {
     onError: (e: any) => toast.error(e?.message || "Erro ao realizar transferência"),
   });
 
+  const updateStockRecordFn = useServerFn(updateSingleStockRecord);
   const updateStockRecordMut = useMutation({
-    mutationFn: useServerFn(updateSingleStockRecord),
+    mutationFn: (args: { id: string; qty: number; min_qty: number; location_label: string }) =>
+      updateStockRecordFn({ data: args }),
     onSuccess: () => {
       toast.success("Saldo de estoque atualizado");
       qc.invalidateQueries();
@@ -285,8 +287,8 @@ function StockPage() {
   const [entryNotes, setEntryNotes] = useState("");
   const [entryItems, setEntryItems] = useState<Array<{ product_id: string; variant_id: string; quantity: number; cost: string }>>([]);
 
-  const entryProducts = productsSelect ?? [];
-  const entrySelectedProductObj = (productId: string) => entryProducts.find((p) => p.id === productId);
+  const entryProducts: any[] = (productsSelect as any[]) ?? [];
+  const entrySelectedProductObj = (productId: string) => entryProducts.find((p: any) => p.id === productId);
 
   const resetEntryForm = () => {
     setEntrySupplier("");
@@ -328,7 +330,7 @@ function StockPage() {
   const fetchVariants = useServerFn(listVariants);
   const { data: dbVariants, isLoading: loadingDbVariants } = useQuery({
     queryKey: ["admin", "product-variants-edit", selectedVarProductId],
-    queryFn: () => fetchVariants({ product_id: selectedVarProductId }),
+    queryFn: () => fetchVariants({ data: { product_id: selectedVarProductId } }),
     enabled: !!selectedVarProductId,
   });
 

@@ -71,7 +71,7 @@ export default function StoreFinder() {
   const fetchInsta = useServerFn(getInstagramFeed);
   const { data: instaFeed } = useQuery({
     queryKey: ["instagram-feed"],
-    queryFn: () => fetchInsta("scenzzy"),
+    queryFn: () => fetchInsta({ data: "scenzzy" }),
     staleTime: 60_000,
   });
 
