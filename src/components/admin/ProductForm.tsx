@@ -446,7 +446,7 @@ export function ProductForm({ initial }: { initial?: any }) {
 
   return (
     <>
-      <form onSubmit={form.handleSubmit((v) => mut.mutate(v), onInvalid)} className="space-y-6">
+      <form onSubmit={form.handleSubmit((v) => mut.mutate(v as FormValues), onInvalid)} className="space-y-6">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <h1 className="font-serif text-2xl font-bold text-neutral-900">{initial?.id ? "Editar produto" : "Novo produto"}</h1>
         <div className="flex items-center gap-2">
