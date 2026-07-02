@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
-import { getR2UploadUrl } from "@/lib/r2.functions";
+import { uploadProductMedia } from "@/lib/r2.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2, Upload, ShieldCheck, ImageIcon } from "lucide-react";
 
@@ -15,7 +15,7 @@ function AdminEditorPage() {
   const { user, role, loading } = useAuth();
   const navigate = useNavigate();
   const { addToast } = useToast();
-  const getUploadUrl = useServerFn(getR2UploadUrl);
+  const uploadMedia = useServerFn(uploadProductMedia);
   const [uploading, setUploading] = useState(false);
   const [uploaded, setUploaded] = useState<{ url: string; key: string }[]>([]);
 
@@ -31,18 +31,25 @@ function AdminEditorPage() {
       addToast("Apenas administradores podem fazer upload.", "info", "Acesso negado");
       return;
     }
+    const MAX = 25 * 1024 * 1024; // 25MB
+    if (file.size > MAX) {
+      addToast(`"${file.name}" excede o limite de 25MB.`, "info", "Erro");
+      return;
+    }
     setUploading(true);
     try {
-      const presigned = await getUploadUrl({
-        data: { filename: file.name, contentType: file.type || "application/octet-stream" },
+      const buf = await file.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      let binary = "";
+      const chunk = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunk) {
+        binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunk)) as any);
+      }
+      const dataBase64 = btoa(binary);
+      const res = await uploadMedia({
+        data: { filename: file.name, contentType: file.type || "application/octet-stream", dataBase64 },
       });
-      const put = await fetch(presigned.uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": file.type || "application/octet-stream" },
-        body: file,
-      });
-      if (!put.ok) throw new Error(`R2 PUT falhou: ${put.status}`);
-      setUploaded((prev) => [{ url: presigned.publicUrl, key: presigned.key }, ...prev]);
+      setUploaded((prev) => [{ url: res.publicUrl, key: res.key }, ...prev]);
       addToast("Upload concluído para o R2.", "info", "Mídia enviada");
     } catch (err: any) {
       addToast(err?.message || "Falha no upload.", "info", "Erro");

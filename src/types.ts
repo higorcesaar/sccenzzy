@@ -11,6 +11,8 @@ export interface Product {
   dimensions?: string; // e.g., "30cm x 20cm x 10cm"
   sizes: string[]; // Shoe: "35", "36", "37". Bag: "Único"
   trialAvailable: boolean;
+  stockQty?: number;
+  sizeStockMap?: Record<string, number>;
 }
 
 export interface CartItem {

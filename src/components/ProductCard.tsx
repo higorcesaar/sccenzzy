@@ -37,12 +37,16 @@ export default function ProductCard({ product, onAddToCart, onSelect }: ProductC
       onClick={() => onSelect(product)}
       className="group bg-white rounded-3xl overflow-hidden border border-stone-100 hover:border-gold-200/50 hover:shadow-2xl transition-all duration-300 flex flex-col h-full cursor-pointer relative"
     >
-      {/* Visual Badge for Discount */}
-      {discountPct && (
+      {/* Visual Badge for Stock / Discount */}
+      {product.stockQty !== undefined && product.stockQty <= 0 ? (
+        <span className="absolute top-4 left-4 z-10 bg-stone-800 text-stone-200 text-[10px] uppercase font-bold tracking-widest px-2.5 py-1 rounded-full">
+          Em Falta
+        </span>
+      ) : discountPct ? (
         <span className="absolute top-4 left-4 z-10 bg-red-600 text-stone-100 text-[10px] uppercase font-bold tracking-widest px-2.5 py-1 rounded-full">
           {discountPct}% OFF
         </span>
-      )}
+      ) : null}
 
       {/* Like Button */}
       <button
@@ -155,19 +159,27 @@ export default function ProductCard({ product, onAddToCart, onSelect }: ProductC
           {/* Luxury size options selection dots */}
           <div className="mt-4 flex flex-wrap items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
             <span className="text-[9px] uppercase tracking-widest text-stone-400 font-bold mr-1">Tamanho:</span>
-            {product.sizes.map((sz) => (
-              <button
-                key={sz}
-                onClick={() => setSelectedSize(sz)}
-                className={`text-[9px] uppercase tracking-widest font-bold border rounded-lg px-2.5 py-1 transition-all ${
-                  selectedSize === sz
-                    ? 'bg-neutral-900 text-stone-50 border-neutral-900 shadow-sm'
-                    : 'bg-stone-50 text-neutral-800 border-stone-200 hover:border-neutral-400'
-                }`}
-              >
-                {sz}
-              </button>
-            ))}
+            {product.sizes.map((sz) => {
+              const szStock = product.sizeStockMap ? (product.sizeStockMap[sz] ?? 0) : (product.stockQty ?? 1);
+              const isSzOut = szStock <= 0;
+              return (
+                <button
+                  key={sz}
+                  onClick={() => setSelectedSize(sz)}
+                  className={`text-[9px] uppercase tracking-widest font-bold border rounded-lg px-2.5 py-1 transition-all ${
+                    selectedSize === sz
+                      ? isSzOut
+                        ? 'bg-stone-100 text-stone-400 border-stone-200 cursor-not-allowed'
+                        : 'bg-neutral-900 text-stone-50 border-neutral-900 shadow-sm'
+                      : isSzOut
+                      ? 'bg-stone-50 text-stone-400 border-stone-100 line-through opacity-60 hover:border-stone-200'
+                      : 'bg-stone-50 text-neutral-800 border-stone-200 hover:border-neutral-400'
+                  }`}
+                >
+                  {sz}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -189,25 +201,34 @@ export default function ProductCard({ product, onAddToCart, onSelect }: ProductC
 
           <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
             {/* Main Add Button */}
-            <button
-              onClick={handleAddClick}
-              disabled={justAdded}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold uppercase tracking-widest transition-all focus:outline-none ${
-                justAdded
-                  ? 'bg-emerald-600 text-stone-100 border border-emerald-600'
-                  : 'bg-neutral-900 active:scale-98 text-stone-50 hover:bg-gold-500 border border-neutral-900 hover:border-gold-500 shadow-md hover:shadow-lg'
-              }`}
-            >
-              {justAdded ? (
-                <>
-                  <Check className="h-4 w-4" /> Adicionado
-                </>
-              ) : (
-                <>
-                  <ShoppingBag className="h-4 w-4" /> Comprar
-                </>
-              )}
-            </button>
+            {product.sizeStockMap && (product.sizeStockMap[selectedSize] ?? 0) <= 0 ? (
+              <button
+                disabled
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold uppercase tracking-widest bg-stone-100 text-stone-400 border border-stone-200 cursor-not-allowed"
+              >
+                Em Falta
+              </button>
+            ) : (
+              <button
+                onClick={handleAddClick}
+                disabled={justAdded}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold uppercase tracking-widest transition-all focus:outline-none ${
+                  justAdded
+                    ? 'bg-emerald-600 text-stone-100 border border-emerald-600'
+                    : 'bg-neutral-900 active:scale-98 text-stone-50 hover:bg-gold-500 border border-neutral-900 hover:border-gold-500 shadow-md hover:shadow-lg'
+                }`}
+              >
+                {justAdded ? (
+                  <>
+                    <Check className="h-4 w-4" /> Adicionado
+                  </>
+                ) : (
+                  <>
+                    <ShoppingBag className="h-4 w-4" /> Comprar
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>

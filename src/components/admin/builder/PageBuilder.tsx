@@ -130,7 +130,7 @@ export function PageBuilder({
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <BlockPropsForm block={selected} onChange={(p) => update(selected.id, p)} />
+            <BlockPropsForm key={selected.id} block={selected} onChange={(p) => update(selected.id, p)} />
           </>
         ) : (
           <div className="text-xs text-stone-500 text-center py-8">

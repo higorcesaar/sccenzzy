@@ -377,7 +377,7 @@ export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidad
           <div className="space-y-4">
             <h4 className="font-display uppercase tracking-widest text-[11px] font-bold text-neutral-900">Suporte Scenzzy</h4>
             <ul className="space-y-2.5 font-light">
-              <li><a href="https://atendimento.arezzo.com.br/hc/pt-br" target="_blank" rel="noreferrer" className="hover:text-gold-500 transition-colors">Central de Atendimento</a></li>
+              <li><Link to="/" className="hover:text-gold-500 transition-colors">Central de Atendimento</Link></li>
               <li><a href="#near-you" className="hover:text-gold-500 transition-colors">Dúvidas sobre Envio / CEP</a></li>
               <li><a href="#boutique-hero" className="hover:text-gold-500 transition-colors">Acompanhar meu Pedido</a></li>
             </ul>
@@ -387,7 +387,7 @@ export default function Storefront({ view = 'home' }: { view?: 'home' | 'novidad
 
         <div className="max-w-7xl mx-auto pt-10 mt-10 border-t border-stone-200 text-center text-[10px] text-stone-500 space-y-2 font-display uppercase tracking-wider font-semibold">
           <p>© 2026 Scenzzy Essential Lifestyle. Todos os direitos reservados. CNPJ: 07.900.208/0077-04 | Cariacica/ES.</p>
-          <p className="text-[9px] text-stone-600">Inspirado nos layouts e mecânicas de alta fidelidade visual de Arezzo&amp;Co.</p>
+          <p className="text-[9px] text-stone-600">Lojas físicas oficiais e curadoria exclusiva de alto luxo Scenzzy.</p>
         </div>
       </footer>
 

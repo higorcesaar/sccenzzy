@@ -31,7 +31,7 @@ export default function Header({ cartCount, onCartClick, onSearch, products, onP
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const announcements = [
-    "✨ Bem-vinda à Scenzzy — Curadoria premium de calçados e bolsas",
+    "✨ Bem-vinda à Scenzzy",
     "💫 Siga nosso Instagram oficial e conheça as novidades da coleção @scenzzy"
   ];
 

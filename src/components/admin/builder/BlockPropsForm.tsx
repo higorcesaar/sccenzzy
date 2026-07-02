@@ -5,26 +5,28 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { getR2UploadUrl } from "@/lib/r2.functions";
+import { uploadProductMedia } from "@/lib/r2.functions";
 import { Upload, Loader2, Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 function useImageUpload() {
-  const getUrl = useServerFn(getR2UploadUrl);
+  const uploadMedia = useServerFn(uploadProductMedia);
   const [uploading, setUploading] = useState(false);
   async function upload(file: File): Promise<string> {
     setUploading(true);
     try {
-      const presigned = await getUrl({
-        data: { filename: file.name, contentType: file.type || "application/octet-stream" },
+      const buf = await file.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      let binary = "";
+      const chunk = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunk) {
+        binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunk)) as any);
+      }
+      const dataBase64 = btoa(binary);
+      const res = await uploadMedia({
+        data: { filename: file.name, contentType: file.type || "application/octet-stream", dataBase64 },
       });
-      const put = await fetch(presigned.uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": file.type || "application/octet-stream" },
-        body: file,
-      });
-      if (!put.ok) throw new Error(`R2 PUT falhou: ${put.status}`);
-      return presigned.publicUrl;
+      return res.publicUrl;
     } finally {
       setUploading(false);
     }
@@ -76,6 +78,8 @@ export function BlockPropsForm({
 }) {
   const p = block.props || {};
   const set = (patch: Record<string, any>) => onChange({ ...p, ...patch });
+  const [newImageUrl, setNewImageUrl] = useState("");
+  const { upload, uploading } = useImageUpload();
 
   switch (block.type) {
     case "hero":
@@ -127,7 +131,7 @@ export function BlockPropsForm({
             <Textarea
               rows={6}
               value={(p.slugs || []).join("\n")}
-              onChange={(e) => set({ slugs: e.target.value.split("\n").map((s) => s.trim()).filter(Boolean) })}
+              onChange={(e) => set({ slugs: e.target.value.split("\n") })}
               className="font-mono text-xs"
             />
           </div>
@@ -137,9 +141,10 @@ export function BlockPropsForm({
       return (
         <div className="space-y-3">
           <div className="space-y-2">
+            <Label className="text-xs font-semibold">Imagens da Galeria</Label>
             {(p.images || []).map((src: string, i: number) => (
-              <div key={i} className="flex items-center gap-2">
-                <img src={src} alt="" className="h-12 w-12 object-cover rounded" />
+              <div key={i} className="flex items-center gap-2 border border-stone-100 rounded-lg p-1 bg-stone-50">
+                <img src={src} alt="" className="h-10 w-10 object-cover rounded border border-stone-200" />
                 <Input
                   value={src}
                   onChange={(e) => {
@@ -147,23 +152,68 @@ export function BlockPropsForm({
                     arr[i] = e.target.value;
                     set({ images: arr });
                   }}
-                  className="flex-1 text-xs"
+                  className="flex-1 text-xs h-8"
                 />
                 <Button
                   size="icon"
                   variant="ghost"
+                  className="h-8 w-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
                   onClick={() => set({ images: (p.images || []).filter((_: any, j: number) => j !== i) })}
                 >
-                  <Trash2 className="h-4 w-4 text-rose-600" />
+                  <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
             ))}
           </div>
-          <ImageField
-            value=""
-            onChange={(v) => set({ images: [...(p.images || []), v] })}
-            label="Adicionar imagem"
-          />
+
+          <div className="border-t border-stone-150 pt-3 space-y-2">
+            <Label className="text-[11px] text-stone-500 font-medium">Adicionar Nova Imagem</Label>
+            <div className="flex gap-2">
+              <Input
+                value={newImageUrl}
+                onChange={(e) => setNewImageUrl(e.target.value)}
+                placeholder="Cole a URL da imagem..."
+                className="flex-1 text-xs"
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                type="button"
+                onClick={() => {
+                  if (newImageUrl.trim()) {
+                    set({ images: [...(p.images || []), newImageUrl.trim()] });
+                    setNewImageUrl("");
+                  }
+                }}
+              >
+                Adicionar
+              </Button>
+            </div>
+            
+            <label className="cursor-pointer block">
+              <input
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={async (e) => {
+                  const f = e.target.files?.[0];
+                  if (!f) return;
+                  try {
+                    const url = await upload(f);
+                    set({ images: [...(p.images || []), url] });
+                    toast.success("Imagem carregada na galeria!");
+                  } catch (err: any) {
+                    toast.error(err?.message || "Falha no upload");
+                  }
+                  e.target.value = "";
+                }}
+              />
+              <span className="flex items-center justify-center gap-1.5 h-9 w-full rounded-md border border-stone-200 text-xs bg-white hover:bg-stone-50 text-stone-600">
+                {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                Fazer Upload de Imagem
+              </span>
+            </label>
+          </div>
         </div>
       );
     case "newsletter":
