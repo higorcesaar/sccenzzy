@@ -155,7 +155,7 @@ export default function HeroCarousel() {
         </div>
       )}
 
-      {/* Side arrows — always visible (like Arezzo) */}
+      {/* Side arrows — always visible (like Scenzzy) */}
       {slides.length > 1 && (
         <>
           <button

@@ -27,7 +27,7 @@ export default function CartDrawer({ isOpen, onClose, cartItems, onUpdateQuantit
   const discount = subtotal * couponDiscountPct;
   const total = subtotal - discount;
 
-  // Arezzo style cashback: 10% back for future buy!
+  // Scenzzy style cashback: 10% back for future buy!
   const cashbackEstimation = Math.round(total * 0.10);
 
   const handleApplyCoupon = () => {
@@ -88,17 +88,6 @@ export default function CartDrawer({ isOpen, onClose, cartItems, onUpdateQuantit
 
           {/* Cart Content / Scroll Lists */}
           <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-            
-            {/* Arezzo cashback callout */}
-            <div className="bg-stone-900 text-stone-100 rounded-2xl p-4 flex items-center gap-3 shadow-inner">
-              <div className="bg-gold-500/20 text-gold-300 p-2 rounded-xl">
-                <Gift className="h-5 w-5" />
-              </div>
-              <div className="flex-1">
-                <p className="text-xs uppercase tracking-wider font-bold text-gold-300">CUPOM ATIVO: GANHE CASHBACK</p>
-                <p className="text-[11px] text-stone-300">Compre agora e acumule 10% de cashback para sua próxima compra!</p>
-              </div>
-            </div>
 
             {cartItems.length === 0 ? (
               <div className="text-center py-20">
@@ -160,7 +149,8 @@ export default function CartDrawer({ isOpen, onClose, cartItems, onUpdateQuantit
                           </span>
                           <button
                             onClick={() => onUpdateQuantity(item.product.id, item.selectedSize, item.quantity + 1)}
-                            className="px-2 py-1 text-xs hover:bg-stone-200 transition-colors font-bold focus:outline-none"
+                            disabled={item.quantity >= (item.product.sizeStockMap ? (item.product.sizeStockMap[item.selectedSize] ?? 0) : (item.product.stockQty ?? 1))}
+                            className="px-2 py-1 text-xs hover:bg-stone-200 transition-colors font-bold focus:outline-none disabled:opacity-30 disabled:cursor-not-allowed"
                           >
                             +
                           </button>
@@ -199,7 +189,7 @@ export default function CartDrawer({ isOpen, onClose, cartItems, onUpdateQuantit
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      placeholder="Ex: PRIMEIROAREZZO"
+                      placeholder="Ex: PRIMEIROSCENZZY"
                       value={couponInput}
                       onChange={(e) => setCouponInput(e.target.value)}
                       className="flex-1 bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-gold-500 uppercase tracking-widest"

@@ -15,7 +15,16 @@ export const PRODUCTS: Product[] = [
     videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-shoes-of-a-woman-walking-on-the-street-42617-large.mp4',
     features: ['Material: Couro Legítimo', 'Salto: 9cm', 'Bico: Fino', 'Cor: Preto'],
     sizes: ['34', '35', '36', '37', '38', '39'],
-    trialAvailable: true
+    trialAvailable: true,
+    stockQty: 12,
+    sizeStockMap: {
+      '34': 3,
+      '35': 0, // Out of stock size for testing
+      '36': 4,
+      '37': 2,
+      '38': 3,
+      '39': 0  // Out of stock size for testing
+    }
   },
   {
     id: 'sc-02',
@@ -30,7 +39,9 @@ export const PRODUCTS: Product[] = [
     features: ['Material: Couro Saffiano', 'Fecho: Metálico Frontal', 'Alça: Ajustável'],
     dimensions: '20cm x 15cm x 6cm',
     sizes: ['Único'],
-    trialAvailable: false
+    trialAvailable: false,
+    stockQty: 5,
+    sizeStockMap: { 'Único': 5 }
   },
   {
     id: 'sc-03',
@@ -44,7 +55,14 @@ export const PRODUCTS: Product[] = [
     ],
     features: ['Material: Nobuck', 'Salto: 6cm', 'Fechamento: Fivela'],
     sizes: ['35', '36', '37', '38'],
-    trialAvailable: true
+    trialAvailable: true,
+    stockQty: 0, // Fully out of stock product
+    sizeStockMap: {
+      '35': 0,
+      '36': 0,
+      '37': 0,
+      '38': 0
+    }
   },
   {
     id: 'sc-04',
@@ -58,7 +76,9 @@ export const PRODUCTS: Product[] = [
     features: ['Material: Couro Texturizado', 'Compartimentos Internos', 'Fecho: Zíper'],
     dimensions: '35cm x 28cm x 12cm',
     sizes: ['Único'],
-    trialAvailable: false
+    trialAvailable: false,
+    stockQty: 8,
+    sizeStockMap: { 'Único': 8 }
   },
   {
     id: 'sc-05',
@@ -74,7 +94,15 @@ export const PRODUCTS: Product[] = [
     ],
     features: ['Material: Lona Premium', 'Sola: Borracha Antiderrapante', 'Palmilha: Anatômica'],
     sizes: ['34', '35', '36', '37', '38'],
-    trialAvailable: true
+    trialAvailable: true,
+    stockQty: 15,
+    sizeStockMap: {
+      '34': 2,
+      '35': 3,
+      '36': 5,
+      '37': 4,
+      '38': 1
+    }
   },
   {
     id: 'sc-06',
@@ -87,7 +115,15 @@ export const PRODUCTS: Product[] = [
     ],
     features: ['Material: Couro', 'Sola: Tratorada 4cm', 'Cano: Curto'],
     sizes: ['35', '36', '37', '38', '39'],
-    trialAvailable: true
+    trialAvailable: true,
+    stockQty: 10,
+    sizeStockMap: {
+      '35': 2,
+      '36': 2,
+      '37': 2,
+      '38': 2,
+      '39': 2
+    }
   },
   {
     id: 'sc-07',
@@ -101,7 +137,9 @@ export const PRODUCTS: Product[] = [
     features: ['Material: Tecido com Pedrarias', 'Fecho: Magnético', 'Alça: Corrente Opcional'],
     dimensions: '18cm x 11cm x 4cm',
     sizes: ['Único'],
-    trialAvailable: false
+    trialAvailable: false,
+    stockQty: 3,
+    sizeStockMap: { 'Único': 3 }
   },
   {
     id: 'sc-08',
@@ -114,7 +152,9 @@ export const PRODUCTS: Product[] = [
     ],
     features: ['Material: Acetato', 'Lentes: Degradê UV400', 'Formato: Oversized'],
     sizes: ['Único'],
-    trialAvailable: true
+    trialAvailable: true,
+    stockQty: 6,
+    sizeStockMap: { 'Único': 6 }
   },
   {
     id: 'sc-09',
@@ -127,7 +167,15 @@ export const PRODUCTS: Product[] = [
     ],
     features: ['Material: Mesh Respirável', 'Sola: EVA Leve', 'Palmilha: Memory Foam'],
     sizes: ['35', '36', '37', '38', '39'],
-    trialAvailable: true
+    trialAvailable: true,
+    stockQty: 8,
+    sizeStockMap: {
+      '35': 1,
+      '36': 2,
+      '37': 2,
+      '38': 2,
+      '39': 1
+    }
   },
   {
     id: 'sc-10',
@@ -140,7 +188,13 @@ export const PRODUCTS: Product[] = [
     ],
     features: ['Material: Couro Legítimo', 'Largura: 3cm', 'Fivela: Metal Dourado'],
     sizes: ['P', 'M', 'G'],
-    trialAvailable: true
+    trialAvailable: true,
+    stockQty: 9,
+    sizeStockMap: {
+      'P': 3,
+      'M': 3,
+      'G': 3
+    }
   },
   {
     id: 'sc-11',
@@ -153,12 +207,14 @@ export const PRODUCTS: Product[] = [
     ],
     features: ['Material: Couro Texturizado', 'Fivela: Quadrada Prateada', 'Largura: 4cm'],
     sizes: ['Único'],
-    trialAvailable: false
+    trialAvailable: false,
+    stockQty: 10,
+    sizeStockMap: { 'Único': 10 }
   }
 ];
 
 export const COUPONS: { [key: string]: number } = {
-  'PRIMEIROAREZZO': 0.10, // Arezzo voucher translated to 10%
+  'PRIMEIROSCENZZY': 0.10, // Scenzzy voucher translated to 10%
   'SCENZZY10': 0.10,      // Custom brand voucher
   'VIPGOLD': 0.20,        // Premium 20%
 };
@@ -170,19 +226,5 @@ export const STORES_PICKUP = [
     address: 'Av. Almirante Barroso, 1980 Loja 08 CCruzeiro, Campina Grande - PB',
     cep: '58415-670',
     distance: '1.2 km de você'
-  },
-  {
-    id: 'st-02',
-    name: 'Scenzzy Leblon Lounge',
-    address: 'Av. Afrânio de Melo Franco, 290 - Leblon, Rio de Janeiro - RJ',
-    cep: '22430-060',
-    distance: '8.4 km de você'
-  },
-  {
-    id: 'st-03',
-    name: 'Scenzzy Exclusive Curitiba',
-    address: 'Rua Comendador Araújo, 731 - Batel, Curitiba - PR',
-    cep: '80420-000',
-    distance: '340 km de você'
   }
 ];

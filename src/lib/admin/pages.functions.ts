@@ -82,8 +82,15 @@ export const getPublicPageBySlug = createServerFn({ method: "POST" })
     z.object({ slug: z.string().min(1).max(120).regex(/^[a-z0-9-]+$/) }).parse(input),
   )
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: row, error } = await supabaseAdmin
+    let client;
+    if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      client = supabaseAdmin;
+    } else {
+      const { supabase } = await import("@/integrations/supabase/client");
+      client = supabase;
+    }
+    const { data: row, error } = await client
       .from("scz_pages")
       .select("id,slug,title,blocks,seo_title,seo_description,seo_keywords,og_image,published_at")
       .eq("slug", data.slug)

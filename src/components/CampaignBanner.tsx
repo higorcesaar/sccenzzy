@@ -1,10 +1,32 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Volume2, VolumeX, Play, Pause, Sparkles, HelpCircle } from 'lucide-react';
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
+import { listPublicHeroSlides } from "../lib/hero-carousel.functions";
 
 export default function CampaignBanner() {
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  const fetchSlides = useServerFn(listPublicHeroSlides);
+  const { data: slides } = useQuery({
+    queryKey: ["public-hero-carousel"],
+    queryFn: () => fetchSlides(),
+    staleTime: 60_000,
+  });
+
+  const activeVideoSlide = slides?.find((s: any) => s.video_url);
+  const videoUrl = activeVideoSlide?.video_url || "https://assets.mixkit.co/videos/preview/mixkit-fashion-model-dancing-at-outdoor-fashion-shoot-40348-large.mp4";
+
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.load();
+      if (isPlaying) {
+        videoRef.current.play().catch(err => console.log("Video autoplay prevented:", err));
+      }
+    }
+  }, [videoUrl]);
 
   const toggleMute = () => {
     if (videoRef.current) {
@@ -39,9 +61,8 @@ export default function CampaignBanner() {
             COLEÇÃO EXCLUSIVA • SCENZZY ICONS
           </span>
           
-          <h2 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-black text-neutral-900 leading-tight">
-            Nova Coleção <br />
-            <span className="text-gold-500">Alto Verão</span>
+          <h2 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-black leading-tight bg-gradient-to-r from-neutral-950 via-gold-500 to-gold-600 bg-clip-text text-transparent pb-2">
+            Nova Coleção
           </h2>
           
           <p className="text-sm sm:text-base text-stone-600 leading-relaxed font-sans font-light">
@@ -70,13 +91,12 @@ export default function CampaignBanner() {
           {/* Autoplay Video Loop */}
           <video
             ref={videoRef}
-            src="https://assets.mixkit.co/videos/preview/mixkit-fashion-model-dancing-at-outdoor-fashion-shoot-40348-large.mp4"
+            src={videoUrl}
             autoPlay
             loop
             muted={isMuted}
             playsInline
             className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
-           
           />
 
           {/* Interactive Player Controls */}

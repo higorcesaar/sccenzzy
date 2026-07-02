@@ -23,7 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Loader2, Upload, X, Save, Copy, Plus, Trash2, ArrowUp, ArrowDown, Star, Info, Warehouse } from "lucide-react";
 import {
   Dialog,
@@ -387,47 +387,9 @@ export function ProductForm({ initial }: { initial?: any }) {
         is_on_sale: v.is_on_sale,
         is_bestseller: v.is_bestseller,
         is_exclusive: v.is_exclusive,
-        has_variants: v.has_variants,
         images: imgs,
       };
       const product = await save({ data: payload });
-      if (v.has_variants) {
-        await saveVariants({ data: { product_id: product.id, variants } });
-      }
-
-      // Prepara itens de estoque para salvar
-      const payloadStock: any[] = [];
-      const activeLocs = locations ?? [];
-      
-      if (!v.has_variants) {
-        for (const loc of activeLocs) {
-          const item = getStockItem(loc.id);
-          payloadStock.push({
-            location_id: loc.id,
-            variant_id: null,
-            qty: item.qty ?? 0,
-            min_qty: item.min_qty ?? 0,
-            location_label: item.location_label || null,
-          });
-        }
-      } else {
-        for (const variant of variants) {
-          for (const loc of activeLocs) {
-            const item = getStockItem(loc.id, variant);
-            payloadStock.push({
-              location_id: loc.id,
-              variant_id: variant.id || null,
-              size: variant.size || null,
-              color: variant.color || null,
-              qty: item.qty ?? 0,
-              min_qty: item.min_qty ?? 0,
-              location_label: item.location_label || null,
-            });
-          }
-        }
-      }
-
-      await saveStock({ data: { product_id: product.id, stockItems: payloadStock } });
       return product;
     },
     onSuccess: (row: any) => {
@@ -483,7 +445,8 @@ export function ProductForm({ initial }: { initial?: any }) {
   }
 
   return (
-    <form onSubmit={form.handleSubmit((v) => mut.mutate(v), onInvalid)} className="space-y-6">
+    <>
+      <form onSubmit={form.handleSubmit((v) => mut.mutate(v), onInvalid)} className="space-y-6">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <h1 className="font-serif text-2xl font-bold text-neutral-900">{initial?.id ? "Editar produto" : "Novo produto"}</h1>
         <div className="flex items-center gap-2">
@@ -499,10 +462,10 @@ export function ProductForm({ initial }: { initial?: any }) {
         </div>
       </div>
 
-      <div className="rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-900 p-3 flex gap-2">
+      <div className="rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900 p-3 flex gap-2">
         <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
         <p>
-          <strong>Novo fluxo:</strong> este formulário cadastra as informações comerciais do produto e permite configurar diretamente o estoque de cada local e variação. Histórico detalhado de movimentações pode ser consultado no módulo <strong>Estoque</strong> no menu lateral.
+          <strong>Cadastro de Variações e Estoque:</strong> este formulário gerencia os dados comerciais do produto. Suas variações (cores, tamanhos, etc.) e o saldo físico de estoque por local agora são controlados de forma centralizada e direta na aba de <strong>Estoque</strong> no menu lateral.
         </p>
       </div>
 
@@ -511,8 +474,6 @@ export function ProductForm({ initial }: { initial?: any }) {
           <TabsTrigger value="basico">Básico</TabsTrigger>
           <TabsTrigger value="midia">Mídias</TabsTrigger>
           <TabsTrigger value="venda">Venda</TabsTrigger>
-          <TabsTrigger value="variacoes">Variações</TabsTrigger>
-          <TabsTrigger value="estoque">Estoque</TabsTrigger>
           <TabsTrigger value="seo">SEO</TabsTrigger>
         </TabsList>
 
@@ -687,263 +648,7 @@ export function ProductForm({ initial }: { initial?: any }) {
           </Card>
         </TabsContent>
 
-        {/* VARIAÇÕES */}
-        <TabsContent value="variacoes">
-          <Card>
-            <CardContent className="space-y-3 pt-6">
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <div className="flex items-center gap-3">
-                  <Switch checked={hasVariants} onCheckedChange={(v) => form.setValue("has_variants", v)} />
-                  <span className="text-sm">Este produto tem variações (tamanho / cor / modelo)</span>
-                </div>
-                {hasVariants && (
-                  <div className="flex gap-2">
-                    <Button type="button" size="sm" variant="outline" onClick={generateGrid}>Gerar grade</Button>
-                    <Button type="button" size="sm" variant="outline" onClick={() => setVariants((vs) => [...vs, { is_active: true, sort_order: vs.length }])}>
-                      <Plus className="h-4 w-4 mr-1" /> Adicionar
-                    </Button>
-                  </div>
-                )}
-              </div>
 
-              <div className="rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900 p-3">
-                <strong>Variações são apenas identificação</strong> (SKU, tamanho, cor, código de barras).
-                Os saldos por variação são gerenciados no módulo <strong>Estoque</strong>.
-              </div>
-
-              {hasVariants && variants.length === 0 && (
-                <p className="text-sm text-stone-500 py-6 text-center">Nenhuma variação. Clique em "Gerar grade" ou "Adicionar".</p>
-              )}
-
-              {hasVariants && variants.length > 0 && (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-stone-50 text-left text-xs uppercase tracking-wider">
-                      <tr>
-                        <th className="p-2">Tamanho</th>
-                        <th className="p-2">Cor</th>
-                        <th className="p-2">Modelo</th>
-                        <th className="p-2">Material</th>
-                        <th className="p-2">Acabamento</th>
-                        <th className="p-2">SKU</th>
-                        <th className="p-2">Cód. interno</th>
-                        <th className="p-2">Cód. barras</th>
-                        <th className="p-2">Preço (R$)</th>
-                        <th className="p-2"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {variants.map((v, i) => (
-                        <tr key={i} className="border-t border-stone-100">
-                          <td className="p-1"><Input value={v.size ?? ""} onChange={(e) => setVariants(vs => vs.map((x, j) => j === i ? { ...x, size: e.target.value } : x))} className="h-8 w-16" /></td>
-                          <td className="p-1"><Input value={v.color ?? ""} onChange={(e) => setVariants(vs => vs.map((x, j) => j === i ? { ...x, color: e.target.value } : x))} className="h-8 w-20" /></td>
-                          <td className="p-1"><Input value={v.model ?? ""} onChange={(e) => setVariants(vs => vs.map((x, j) => j === i ? { ...x, model: e.target.value } : x))} className="h-8 w-20" /></td>
-                          <td className="p-1"><Input value={v.material ?? ""} onChange={(e) => setVariants(vs => vs.map((x, j) => j === i ? { ...x, material: e.target.value } : x))} className="h-8 w-20" /></td>
-                          <td className="p-1"><Input value={v.finish ?? ""} onChange={(e) => setVariants(vs => vs.map((x, j) => j === i ? { ...x, finish: e.target.value } : x))} className="h-8 w-20" /></td>
-                          <td className="p-1"><Input value={v.sku ?? ""} onChange={(e) => setVariants(vs => vs.map((x, j) => j === i ? { ...x, sku: e.target.value } : x))} className="h-8 w-24" /></td>
-                          <td className="p-1"><Input value={v.internal_code ?? ""} onChange={(e) => setVariants(vs => vs.map((x, j) => j === i ? { ...x, internal_code: e.target.value } : x))} className="h-8 w-24" /></td>
-                          <td className="p-1"><Input value={v.barcode ?? ""} onChange={(e) => setVariants(vs => vs.map((x, j) => j === i ? { ...x, barcode: e.target.value } : x))} className="h-8 w-28" /></td>
-                          <td className="p-1"><Input type="number" step="0.01" value={v.price_cents ? v.price_cents / 100 : ""} onChange={(e) => setVariants(vs => vs.map((x, j) => j === i ? { ...x, price_cents: e.target.value ? Math.round(parseFloat(e.target.value) * 100) : null } : x))} className="h-8 w-20" placeholder="—" /></td>
-                          <td className="p-1">
-                            <Button type="button" size="sm" variant="ghost" onClick={() => setVariants(vs => vs.filter((_, j) => j !== i))}>
-                              <Trash2 className="h-4 w-4 text-rose-600" />
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* ESTOQUE */}
-        <TabsContent value="estoque">
-          <Card>
-            <CardContent className="space-y-4 pt-6">
-              <div className="rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900 p-3 flex gap-2">
-                <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                <p>
-                  <strong>Configuração Direta de Estoque:</strong> defina os saldos iniciais ou de ajuste,
-                  estoque mínimo e localização física para este produto e suas variações em cada local. Os
-                  ajustes de quantidade serão gravados automaticamente no histórico de movimentações.
-                </p>
-              </div>
-
-              {!hasVariants ? (
-                // Produto Simples
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-stone-50 text-left text-xs uppercase tracking-wider">
-                      <tr>
-                        <th className="p-3">Local de Estoque</th>
-                        <th className="p-3">Quantidade</th>
-                        <th className="p-3">Estoque Mínimo</th>
-                        <th className="p-3">Localização Física (Gôndola / Corredor)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(locations ?? []).map((loc: any) => {
-                        const item = getStockItem(loc.id);
-                        return (
-                          <tr key={loc.id} className="border-t border-stone-100">
-                            <td className="p-3 font-medium text-stone-700">{loc.name}</td>
-                            <td className="p-3">
-                              <Input 
-                                type="number" 
-                                value={item.qty} 
-                                onChange={(e) => updateStockItem(loc.id, Number(e.target.value), item.min_qty, item.location_label || "")} 
-                                className="h-9 w-28" 
-                                min={0}
-                              />
-                            </td>
-                            <td className="p-3">
-                              <Input 
-                                type="number" 
-                                value={item.min_qty} 
-                                onChange={(e) => updateStockItem(loc.id, item.qty, Number(e.target.value), item.location_label || "")} 
-                                className="h-9 w-28" 
-                                min={0}
-                              />
-                            </td>
-                            <td className="p-3">
-                              <Input 
-                                value={item.location_label || ""} 
-                                onChange={(e) => updateStockItem(loc.id, item.qty, item.min_qty, e.target.value)} 
-                                placeholder="Ex: Corredor A / Prateleira 3" 
-                                className="h-9 w-full"
-                              />
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                // Produto com Variações
-                <div className="space-y-4">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-stone-50 text-left text-xs uppercase tracking-wider">
-                        <tr>
-                          <th className="p-3">Variação</th>
-                          <th className="p-3">SKU</th>
-                          <th className="p-3">Estoque Total (Físico)</th>
-                          <th className="p-3 text-right">Ação</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {variants.map((v, i) => {
-                          const totalStock = getVariantTotalStock(v);
-                          return (
-                            <tr key={i} className="border-t border-stone-100">
-                              <td className="p-3">
-                                <span className="font-semibold text-stone-900">
-                                  {v.size ? `Tamanho: ${v.size}` : "Único"}
-                                </span>
-                                {v.color && (
-                                  <span className="text-stone-500 text-xs ml-2">
-                                    ({v.color})
-                                  </span>
-                                )}
-                              </td>
-                              <td className="p-3 text-xs text-stone-600 font-mono">{v.sku || "—"}</td>
-                              <td className="p-3">
-                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${totalStock === 0 ? "bg-rose-100 text-rose-800" : "bg-emerald-100 text-emerald-800"}`}>
-                                  {totalStock} un
-                                </span>
-                              </td>
-                              <td className="p-3 text-right">
-                                <Button 
-                                  type="button" 
-                                  size="sm" 
-                                  variant="outline" 
-                                  onClick={() => setActiveStockVariant(v)}
-                                  className="flex items-center gap-1.5 ml-auto"
-                                >
-                                  <Warehouse className="h-3.5 w-3.5" />
-                                  Gerenciar Estoque
-                                </Button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Modal de Gerenciamento de Estoque por Variação */}
-                  <Dialog open={!!activeStockVariant} onOpenChange={(open) => !open && setActiveStockVariant(null)}>
-                    <DialogContent className="max-w-2xl bg-white">
-                      <DialogHeader>
-                        <DialogTitle className="font-serif text-lg">
-                          Gerenciar Estoque da Variação: {activeStockVariant ? `${activeStockVariant.size ?? 'Único'} ${activeStockVariant.color ? `· ${activeStockVariant.color}` : ''}` : ''}
-                        </DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4 py-2">
-                        <table className="w-full text-sm">
-                          <thead className="bg-stone-50 text-left text-xs uppercase tracking-wider">
-                            <tr>
-                              <th className="p-2">Local</th>
-                              <th className="p-2">Quantidade</th>
-                              <th className="p-2">Mínimo</th>
-                              <th className="p-2">Localização Física</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {(locations ?? []).map((loc: any) => {
-                              if (!activeStockVariant) return null;
-                              const item = getStockItem(loc.id, activeStockVariant);
-                              return (
-                                <tr key={loc.id} className="border-t border-stone-100">
-                                  <td className="p-2 font-medium text-stone-700 text-xs">{loc.name}</td>
-                                  <td className="p-2">
-                                    <Input 
-                                      type="number" 
-                                      value={item.qty} 
-                                      onChange={(e) => updateStockItem(loc.id, Number(e.target.value), item.min_qty, item.location_label || "", activeStockVariant)} 
-                                      className="h-8 w-20" 
-                                      min={0}
-                                    />
-                                  </td>
-                                  <td className="p-2">
-                                    <Input 
-                                      type="number" 
-                                      value={item.min_qty} 
-                                      onChange={(e) => updateStockItem(loc.id, item.qty, Number(e.target.value), item.location_label || "", activeStockVariant)} 
-                                      className="h-8 w-20" 
-                                      min={0}
-                                    />
-                                  </td>
-                                  <td className="p-2">
-                                    <Input 
-                                      value={item.location_label || ""} 
-                                      onChange={(e) => updateStockItem(loc.id, item.qty, item.min_qty, e.target.value, activeStockVariant)} 
-                                      placeholder="Ex: Prateleira 4" 
-                                      className="h-8 w-full"
-                                    />
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                        <div className="flex justify-end pt-2">
-                          <Button type="button" onClick={() => setActiveStockVariant(null)} className="bg-amber-600 hover:bg-amber-700">
-                            Confirmar
-                          </Button>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         {/* SEO */}
         <TabsContent value="seo">
@@ -956,17 +661,18 @@ export function ProductForm({ initial }: { initial?: any }) {
           </Card>
         </TabsContent>
       </Tabs>
-    </form>
-    {/* Save confirmation dialog */}
-    <Dialog open={savedOpen} onOpenChange={setSavedOpen}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Salvo</DialogTitle>
-        </DialogHeader>
-        <p>Produto salvo com sucesso.</p>
-        <Button onClick={() => setSavedOpen(false)}>Fechar</Button>
-      </DialogContent>
-    </Dialog>
+      </form>
+      {/* Save confirmation dialog */}
+      <Dialog open={savedOpen} onOpenChange={setSavedOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Salvo</DialogTitle>
+          </DialogHeader>
+          <p>Produto salvo com sucesso.</p>
+          <Button onClick={() => setSavedOpen(false)}>Fechar</Button>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

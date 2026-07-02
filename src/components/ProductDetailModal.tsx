@@ -179,20 +179,45 @@ export default function ProductDetailModal({ isOpen, onClose, product, onAddToCa
             <div className="space-y-2">
               <span className="text-[10px] uppercase tracking-widest text-stone-400 font-bold block">Escolha o Tamanho:</span>
               <div className="flex flex-wrap gap-2">
-                {product.sizes.map((sz) => (
-                  <button
-                    key={sz}
-                    onClick={() => setSelectedSize(sz)}
-                    className={`text-xs uppercase tracking-wider font-semibold border rounded-xl px-4 py-2.5 transition-all ${
-                      selectedSize === sz
-                        ? 'bg-neutral-900 text-stone-50 border-neutral-900 shadow-md scale-[1.02]'
-                        : 'bg-stone-50 text-neutral-800 border-stone-200 hover:border-neutral-400'
-                    }`}
-                  >
-                    {sz}
-                  </button>
-                ))}
+                {product.sizes.map((sz) => {
+                  const szStock = product.sizeStockMap ? (product.sizeStockMap[sz] ?? 0) : (product.stockQty ?? 1);
+                  const isSzOut = szStock <= 0;
+                  return (
+                    <button
+                      key={sz}
+                      onClick={() => setSelectedSize(sz)}
+                      className={`text-xs uppercase tracking-wider font-semibold border rounded-xl px-4 py-2.5 transition-all relative ${
+                        selectedSize === sz
+                          ? isSzOut
+                            ? 'bg-stone-100 text-stone-400 border-stone-300'
+                            : 'bg-neutral-900 text-stone-50 border-neutral-900 shadow-md scale-[1.02]'
+                          : isSzOut
+                          ? 'bg-stone-50 text-stone-400 border-stone-200 line-through opacity-60 hover:border-stone-300'
+                          : 'bg-stone-50 text-neutral-800 border-stone-200 hover:border-neutral-400'
+                      }`}
+                    >
+                      {sz}
+                      {isSzOut && (
+                        <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
+              
+              {/* Selected size out of stock alert */}
+              {product.sizeStockMap && (product.sizeStockMap[selectedSize] ?? 0) <= 0 && (
+                <div className="mt-3 text-xs text-red-700 bg-red-50 border border-red-100 p-3 rounded-xl flex items-center gap-2">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                  </span>
+                  <span>Este tamanho ({selectedSize}) encontra-se <strong>em falta</strong> no estoque.</span>
+                </div>
+              )}
             </div>
 
             {/* Shipping benefits list */}
@@ -214,25 +239,34 @@ export default function ProductDetailModal({ isOpen, onClose, product, onAddToCa
 
           {/* Action Row */}
           <div className="flex gap-3 pt-6 mt-6 border-t border-stone-100">
-            <button
-              onClick={handleAddClick}
-              disabled={justAdded}
-              className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl text-xs font-semibold uppercase tracking-widest transition-all focus:outline-none shadow-md hover:shadow-xl ${
-                justAdded
-                  ? 'bg-emerald-650 text-stone-100 border border-emerald-650'
-                  : 'bg-neutral-900 text-stone-50 hover:bg-gold-500 border border-neutral-900 hover:border-gold-500'
-              }`}
-            >
-              {justAdded ? (
-                <>
-                  <Check className="h-4.5 w-4.5" /> Adicionado à Sacola
-                </>
-              ) : (
-                <>
-                  <ShoppingBag className="h-4.5 w-4.5" /> Adicionar à Sacola
-                </>
-              )}
-            </button>
+            {product.sizeStockMap && (product.sizeStockMap[selectedSize] ?? 0) <= 0 ? (
+              <button
+                disabled
+                className="flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl text-xs font-semibold uppercase tracking-widest bg-stone-100 text-stone-400 border border-stone-200 cursor-not-allowed shadow-none"
+              >
+                Produto em Falta
+              </button>
+            ) : (
+              <button
+                onClick={handleAddClick}
+                disabled={justAdded}
+                className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl text-xs font-semibold uppercase tracking-widest transition-all focus:outline-none shadow-md hover:shadow-xl ${
+                  justAdded
+                    ? 'bg-emerald-650 text-stone-100 border border-emerald-650'
+                    : 'bg-neutral-900 text-stone-50 hover:bg-gold-500 border border-neutral-900 hover:border-gold-500'
+                }`}
+              >
+                {justAdded ? (
+                  <>
+                    <Check className="h-4.5 w-4.5" /> Adicionado à Sacola
+                  </>
+                ) : (
+                  <>
+                    <ShoppingBag className="h-4.5 w-4.5" /> Adicionar à Sacola
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>

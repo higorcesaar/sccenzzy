@@ -1,4 +1,12 @@
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import type { Block } from "@/lib/admin/blocks";
+import { listPublicProducts } from "../../lib/storefront.functions";
+import ProductCard from "../ProductCard";
+import ProductDetailModal from "../ProductDetailModal";
+import { useToast } from "../../hooks/useToast";
+import type { Product } from "../../types";
 
 /**
  * Renderiza um array de blocos (público e preview).
@@ -72,23 +80,7 @@ function BlockView({ block }: { block: Block }) {
         </section>
       );
     case "product_grid":
-      return (
-        <section className="py-12 max-w-7xl mx-auto px-4">
-          {p.title && <h3 className="font-serif text-2xl font-bold mb-6">{p.title}</h3>}
-          <div className={`grid gap-4 grid-cols-2 md:grid-cols-${Math.min(p.columns || 4, 4)}`}>
-            {(p.slugs || []).map((s: string) => (
-              <div key={s} className="aspect-[3/4] rounded-xl bg-stone-100 flex items-center justify-center text-xs text-stone-500">
-                {s}
-              </div>
-            ))}
-            {(!p.slugs || p.slugs.length === 0) && (
-              <div className="col-span-full text-center text-sm text-stone-500 py-8">
-                Sem produtos selecionados
-              </div>
-            )}
-          </div>
-        </section>
-      );
+      return <ProductGridBlock p={p} />;
     case "gallery":
       return (
         <section className="py-12 max-w-7xl mx-auto px-4">
@@ -151,4 +143,79 @@ function BlockView({ block }: { block: Block }) {
     default:
       return null;
   }
+}
+
+function ProductGridBlock({ p }: { p: any }) {
+  const { addToast } = useToast();
+  const fetchProducts = useServerFn(listPublicProducts);
+  const { data: dbProducts = [] } = useQuery({
+    queryKey: ["public-products", "renderer"],
+    queryFn: () => fetchProducts(),
+    staleTime: 30_000,
+  });
+
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+
+  const handleAddToCart = (product: Product, size: string) => {
+    addToast(`${product.name} (Tamanho ${size}) foi adicionado à sacola de compras!`, 'cart', 'Sacola Atualizada');
+  };
+
+  const handleProductSelect = (product: Product) => {
+    setSelectedProduct(product);
+    setIsDetailOpen(true);
+  };
+
+  const slugs = (p.slugs || []).map((s: string) => s.trim().toLowerCase()).filter(Boolean);
+
+  // Match dbProducts to slugs
+  const matchedProducts = slugs
+    .map((slug: string) => {
+      return dbProducts.find(
+        (prod: any) =>
+          prod.id.toLowerCase() === slug || prod.dbId?.toLowerCase() === slug
+      );
+    })
+    .filter(Boolean) as Product[];
+
+  return (
+    <section className="py-12 max-w-7xl mx-auto px-4">
+      {p.title && <h3 className="font-serif text-2xl font-bold mb-6 text-center text-neutral-900">{p.title}</h3>}
+      {matchedProducts.length > 0 ? (
+        <div className={`grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-${Math.min(p.columns || 4, 4)}`}>
+          {matchedProducts.map((prod, idx) => (
+            <ProductCard
+              key={`${prod.id}-${idx}`}
+              product={prod}
+              onAddToCart={handleAddToCart}
+              onSelect={handleProductSelect}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
+          {(p.slugs || []).filter(Boolean).map((s: string) => (
+            <div key={s} className="aspect-[3/4] rounded-2xl bg-stone-150 border border-stone-250 flex flex-col items-center justify-center text-xs text-stone-500 p-4 text-center">
+              <span className="font-semibold block mb-1">Produto não encontrado</span>
+              <span className="font-mono text-[10px] opacity-70">{s}</span>
+            </div>
+          ))}
+          {(!p.slugs || p.slugs.filter(Boolean).length === 0) && (
+            <div className="col-span-full text-center text-sm text-stone-500 py-8">
+              Sem produtos selecionados
+            </div>
+          )}
+        </div>
+      )}
+
+      {selectedProduct && (
+        <ProductDetailModal
+          isOpen={isDetailOpen}
+          onClose={() => setIsDetailOpen(false)}
+          product={selectedProduct}
+          onAddToCart={handleAddToCart}
+        />
+      )}
+    </section>
+  );
 }

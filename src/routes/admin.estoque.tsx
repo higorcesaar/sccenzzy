@@ -15,8 +15,11 @@ import {
   listMovements,
   listProductsForSelect,
   listBrands,
+  updateSingleStockRecord,
 } from "@/lib/admin/stock-erp.functions";
 import { listCategories } from "@/lib/admin/products.functions";
+import { listVariants, syncProductVariants } from "@/lib/admin/variants.functions";
+import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -188,6 +191,15 @@ function StockPage() {
     onError: (e: any) => toast.error(e?.message || "Erro ao realizar transferência"),
   });
 
+  const updateStockRecordMut = useMutation({
+    mutationFn: useServerFn(updateSingleStockRecord),
+    onSuccess: () => {
+      toast.success("Saldo de estoque atualizado");
+      qc.invalidateQueries();
+    },
+    onError: (e: any) => toast.error(e?.message || "Erro ao atualizar estoque"),
+  });
+
   // Queries globais
   const { data: dashboard, isLoading: loadingDash } = useQuery({
     queryKey: ["admin", "stock-dashboard"],
@@ -302,6 +314,58 @@ function StockPage() {
     setExitNotes("");
   };
 
+  // Estados para edição inline de estoques
+  const [editingRowId, setEditingRowId] = useState<string | null>(null);
+  const [editQty, setEditQty] = useState<number>(0);
+  const [editMinQty, setEditMinQty] = useState<number>(0);
+  const [editLocationLabel, setEditLocationLabel] = useState<string>("");
+
+  // Estados para Gerenciamento de Variações
+  const [selectedVarProductId, setSelectedVarProductId] = useState<string>("");
+  const [hasVariantsState, setHasVariantsState] = useState<boolean>(false);
+  const [localVariants, setLocalVariants] = useState<any[]>([]);
+
+  const fetchVariants = useServerFn(listVariants);
+  const { data: dbVariants, isLoading: loadingDbVariants } = useQuery({
+    queryKey: ["admin", "product-variants-edit", selectedVarProductId],
+    queryFn: () => fetchVariants({ product_id: selectedVarProductId }),
+    enabled: !!selectedVarProductId,
+  });
+
+  const syncVariantsFn = useServerFn(syncProductVariants);
+  const saveVariantsMut = useMutation({
+    mutationFn: (args: { product_id: string; variants: any[] }) => syncVariantsFn({ data: args }),
+    onSuccess: () => {
+      toast.success("Variações sincronizadas com sucesso!");
+      qc.invalidateQueries({ queryKey: ["admin", "stock-products-select"] });
+      qc.invalidateQueries({ queryKey: ["admin", "product-variants-edit", selectedVarProductId] });
+      qc.invalidateQueries({ queryKey: ["admin", "stock-list"] });
+    },
+    onError: (e: any) => {
+      toast.error(e?.message || "Erro ao salvar variações");
+    },
+  });
+
+  const [lastSelectedVarProductId, setLastSelectedVarProductId] = useState<string>("");
+  if (selectedVarProductId !== lastSelectedVarProductId) {
+    setLastSelectedVarProductId(selectedVarProductId);
+    if (productsSelect && selectedVarProductId) {
+      const p = productsSelect.find((x: any) => x.id === selectedVarProductId);
+      setHasVariantsState(p?.has_variants ?? false);
+    }
+  }
+
+  const [lastDbVariantsId, setLastDbVariantsId] = useState<string | null>(null);
+  const dbVariantsKey = dbVariants ? JSON.stringify(dbVariants) : "";
+  if (dbVariantsKey !== lastDbVariantsId) {
+    setLastDbVariantsId(dbVariantsKey);
+    if (dbVariants) {
+      setLocalVariants(dbVariants);
+    } else {
+      setLocalVariants([]);
+    }
+  }
+
   // Estados do Formulário de Ajuste
   const [adjustProductId, setAdjustProductId] = useState("");
   const [adjustVariantId, setAdjustVariantId] = useState("");
@@ -396,6 +460,9 @@ function StockPage() {
           <TabsTrigger value="operacoes" className="flex items-center gap-1.5">
             <Warehouse className="h-4 w-4" /> Operações
           </TabsTrigger>
+          <TabsTrigger value="variacoes" className="flex items-center gap-1.5">
+            <Plus className="h-4 w-4 text-emerald-600" /> Cadastro de Variações
+          </TabsTrigger>
           <TabsTrigger value="historico" className="flex items-center gap-1.5">
             <History className="h-4 w-4" /> Histórico de Movimentações
           </TabsTrigger>
@@ -417,6 +484,10 @@ function StockPage() {
                   </CardHeader>
                   <CardContent className="p-4 pt-1">
                     <p className="text-2xl font-extrabold text-neutral-900">{dashboard?.totalProducts ?? 0}</p>
+                    <div className="flex items-center gap-1 mt-1 text-[10px] text-emerald-600 font-semibold tracking-wide">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                      Catálogo Verificado
+                    </div>
                   </CardContent>
                 </Card>
                 <Card>
@@ -425,6 +496,10 @@ function StockPage() {
                   </CardHeader>
                   <CardContent className="p-4 pt-1">
                     <p className="text-2xl font-extrabold text-emerald-700">{dashboard?.totalQty ?? 0} un</p>
+                    <div className="flex items-center gap-1 mt-1 text-[10px] text-emerald-600 font-semibold tracking-wide">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                      Estoque Verificado
+                    </div>
                   </CardContent>
                 </Card>
                 <Card>
@@ -563,6 +638,34 @@ function StockPage() {
         <TabsContent value="produtos" className="space-y-4">
           <Card>
             <CardContent className="pt-6 space-y-4">
+              {/* Resumo verificado do Estoque */}
+              <div className="flex flex-wrap items-center gap-4 bg-stone-50 border border-stone-100 p-4 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <span className="text-stone-500 text-xs font-semibold">Total de Produtos no Catálogo:</span>
+                  <span className="text-sm font-extrabold text-stone-950 font-mono bg-white px-2 py-0.5 rounded border border-stone-200">
+                    {dashboard?.totalProducts ?? 0}
+                  </span>
+                </div>
+                <div className="h-4 w-px bg-stone-200 hidden sm:block" />
+                <div className="flex items-center gap-2">
+                  <span className="text-stone-500 text-xs font-semibold">Total em Estoque (Unidades):</span>
+                  <span className="text-sm font-extrabold text-emerald-700 font-mono bg-white px-2 py-0.5 rounded border border-stone-200">
+                    {dashboard?.totalQty ?? 0} un
+                  </span>
+                </div>
+                {stockData && (
+                  <>
+                    <div className="h-4 w-px bg-stone-200 hidden sm:block" />
+                    <div className="flex items-center gap-2">
+                      <span className="text-stone-500 text-xs font-semibold">Saldos Filtrados:</span>
+                      <span className="text-sm font-extrabold text-amber-800 font-mono bg-white px-2 py-0.5 rounded border border-stone-200">
+                        {stockData.total} registros
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
+
               {/* Filtros */}
               <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
                 <div className="relative">
@@ -633,41 +736,188 @@ function StockPage() {
                           <TableHead>Quantidade</TableHead>
                           <TableHead>Mínimo</TableHead>
                           <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Ações</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {stockData.rows.map((row: any) => (
-                          <TableRow key={row.id}>
-                            <TableCell>
-                              <div className="font-semibold text-neutral-900">{row.product?.name}</div>
-                              <div className="text-[10px] text-stone-500">{row.product?.category?.name || "—"}</div>
-                            </TableCell>
-                            <TableCell>
-                              {row.variant ? (
-                                <div className="text-xs">
-                                  {row.variant.size && <Badge variant="outline" className="mr-1">{row.variant.size}</Badge>}
-                                  {row.variant.color && <span className="text-stone-600 text-xs">{row.variant.color}</span>}
+                        {stockData.rows.map((row: any) => {
+                          const isEditing = editingRowId === row.id;
+                          return (
+                            <TableRow key={row.id} className={isEditing ? "bg-amber-50/40" : ""}>
+                              <TableCell>
+                                <div className="font-semibold text-neutral-900">{row.product?.name}</div>
+                                <div className="text-[10px] text-stone-500">{row.product?.category?.name || "—"}</div>
+                              </TableCell>
+                              <TableCell>
+                                {row.variant ? (
+                                  <div className="text-xs">
+                                    {row.variant.size && <Badge variant="outline" className="mr-1">{row.variant.size}</Badge>}
+                                    {row.variant.color && <span className="text-stone-600 text-xs">{row.variant.color}</span>}
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-stone-400">Único</span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1 text-xs font-medium text-stone-700">
+                                  <MapPin className="h-3 w-3 text-stone-400" />
+                                  {row.location?.name}
                                 </div>
-                              ) : (
-                                <span className="text-xs text-stone-400">Único</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1 text-xs font-medium text-stone-700">
-                                <MapPin className="h-3 w-3 text-stone-400" />
-                                {row.location?.name}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="text-xs font-mono">{row.variant?.sku || row.product?.sku || "—"}</div>
-                              <div className="text-[10px] text-stone-400">{row.variant?.barcode || "—"}</div>
-                            </TableCell>
-                            <TableCell className="text-xs text-stone-600">{row.location_label || "—"}</TableCell>
-                            <TableCell className="font-bold text-neutral-900">{row.qty} un</TableCell>
-                            <TableCell className="text-stone-500">{row.min_qty} un</TableCell>
-                            <TableCell>{getStatusBadge(row.qty, row.min_qty)}</TableCell>
-                          </TableRow>
-                        ))}
+                              </TableCell>
+                              <TableCell>
+                                <div className="text-xs font-mono">{row.variant?.sku || row.product?.sku || "—"}</div>
+                                <div className="text-[10px] text-stone-400">{row.variant?.barcode || "—"}</div>
+                              </TableCell>
+                              <TableCell>
+                                {isEditing ? (
+                                  <Input
+                                    value={editLocationLabel}
+                                    onChange={(e) => setEditLocationLabel(e.target.value)}
+                                    className="h-8 text-xs bg-white border border-stone-200"
+                                    placeholder="Ex: Corredor A"
+                                  />
+                                ) : (
+                                  <span className="text-xs text-stone-600">{row.location_label || "—"}</span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {isEditing ? (
+                                  <div className="flex items-center gap-1">
+                                    <Input
+                                      type="number"
+                                      value={editQty}
+                                      onChange={(e) => setEditQty(Math.max(0, Number(e.target.value)))}
+                                      className="h-8 w-20 text-xs text-center font-bold font-mono bg-white"
+                                      min={0}
+                                    />
+                                    <span className="text-xs text-stone-500">un</span>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      className="h-6 w-6 rounded-full border-stone-200 text-stone-600 hover:bg-stone-100 disabled:opacity-30"
+                                      onClick={() => {
+                                        if (row.qty <= 0) return;
+                                        updateStockRecordMut.mutate({
+                                          id: row.id,
+                                          qty: Math.max(0, row.qty - 1),
+                                          min_qty: row.min_qty,
+                                          location_label: row.location_label,
+                                        });
+                                      }}
+                                      disabled={updateStockRecordMut.isPending || row.qty <= 0}
+                                    >
+                                      -
+                                    </Button>
+                                    <span className="font-bold text-neutral-900 w-10 text-center font-mono text-sm">{row.qty}</span>
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      className="h-6 w-6 rounded-full border-stone-200 text-stone-600 hover:bg-stone-100"
+                                      onClick={() => {
+                                        updateStockRecordMut.mutate({
+                                          id: row.id,
+                                          qty: row.qty + 1,
+                                          min_qty: row.min_qty,
+                                          location_label: row.location_label,
+                                        });
+                                      }}
+                                      disabled={updateStockRecordMut.isPending}
+                                    >
+                                      +
+                                    </Button>
+                                  </div>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {isEditing ? (
+                                  <div className="flex items-center gap-1">
+                                    <Input
+                                      type="number"
+                                      value={editMinQty}
+                                      onChange={(e) => setEditMinQty(Math.max(0, Number(e.target.value)))}
+                                      className="h-8 w-16 text-xs text-center font-mono bg-white"
+                                      min={0}
+                                    />
+                                    <span className="text-xs text-stone-500">un</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-stone-500 text-xs font-mono">{row.min_qty} un</span>
+                                )}
+                              </TableCell>
+                              <TableCell>{getStatusBadge(isEditing ? editQty : row.qty, isEditing ? editMinQty : row.min_qty)}</TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                                  {isEditing ? (
+                                    <>
+                                      <Button
+                                        variant="default"
+                                        size="sm"
+                                        onClick={() => {
+                                          updateStockRecordMut.mutate({
+                                            id: row.id,
+                                            qty: editQty,
+                                            min_qty: editMinQty,
+                                            location_label: editLocationLabel,
+                                          }, {
+                                            onSuccess: () => {
+                                              setEditingRowId(null);
+                                            }
+                                          });
+                                        }}
+                                        disabled={updateStockRecordMut.isPending}
+                                        className="h-8 text-xs bg-amber-600 hover:bg-amber-700 text-white px-2.5"
+                                      >
+                                        {updateStockRecordMut.isPending ? "Salvando..." : "Salvar"}
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setEditingRowId(null)}
+                                        className="h-8 text-xs text-stone-600 border-stone-200 hover:bg-stone-50 px-2"
+                                      >
+                                        Cancelar
+                                      </Button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                          setEditingRowId(row.id);
+                                          setEditQty(row.qty);
+                                          setEditMinQty(row.min_qty);
+                                          setEditLocationLabel(row.location_label ?? "");
+                                        }}
+                                        className="h-8 text-xs text-stone-700 border-stone-200 hover:bg-stone-50 px-2 flex items-center gap-1"
+                                      >
+                                        Editar
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                          setAdjustProductId(row.product.id);
+                                          setAdjustVariantId(row.variant?.id ?? "");
+                                          setAdjustLocationId(row.location.id);
+                                          setAdjustCountedQty(row.qty);
+                                          setAdjustNotes("Ajuste rápido via listagem de estoque");
+                                          setOpenAdjust(true);
+                                        }}
+                                        className="h-8 text-xs text-amber-700 hover:text-amber-800 border-amber-200 hover:bg-amber-50 px-2 flex items-center gap-1"
+                                      >
+                                        Ajustar
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   </div>
@@ -1291,6 +1541,307 @@ function StockPage() {
               </div>
             </DialogContent>
           </Dialog>
+        </TabsContent>
+
+        {/* CADASTRO DE VARIAÇÕES */}
+        <TabsContent value="variacoes" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="font-serif text-2xl font-bold text-stone-900">Gerenciamento e Cadastro de Variações</CardTitle>
+              <CardDescription>
+                Selecione um produto para criar, editar ou gerar grades de tamanhos, cores e SKUs. 
+                Os saldos de cada local serão atualizados dinamicamente a partir das variações cadastradas.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div>
+                <Label className="text-xs font-semibold mb-1 block">Selecione o Produto</Label>
+                <SearchableProductSelect
+                  products={entryProducts}
+                  value={selectedVarProductId}
+                  onChange={(id) => {
+                    setSelectedVarProductId(id);
+                  }}
+                  placeholder="Selecione um produto para gerenciar variações..."
+                />
+              </div>
+
+              {selectedVarProductId && (
+                <div className="space-y-6 border-t border-stone-100 pt-4">
+                  <div className="flex items-center justify-between bg-stone-50 border border-stone-200 p-4 rounded-lg">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-3">
+                        <Switch
+                          checked={hasVariantsState}
+                          onCheckedChange={(checked) => {
+                            setHasVariantsState(checked);
+                            if (!checked) {
+                              setLocalVariants([]);
+                            }
+                          }}
+                          id="has-variants-switch"
+                        />
+                        <Label htmlFor="has-variants-switch" className="text-sm font-bold text-stone-850 cursor-pointer">
+                          Este produto possui variações (tamanho / cor / modelo)
+                        </Label>
+                      </div>
+                      <p className="text-xs text-stone-500 pl-11">
+                        Ative se o produto tiver variações físicas. Caso contrário, será considerado de tamanho/cor Único.
+                      </p>
+                    </div>
+
+                    {hasVariantsState && (
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            const sizesStr = prompt("Tamanhos (separados por vírgula). Ex: PP,P,M,G,GG ou 36,38,40,42");
+                            if (!sizesStr) return;
+                            const colorsStr = prompt("Cores (separadas por vírgula). Deixe em branco se não houver variação de cor.");
+                            
+                            const sizes = sizesStr.split(",").map((s) => s.trim()).filter(Boolean);
+                            const colors = (colorsStr || "").split(",").map((s) => s.trim()).filter(Boolean);
+                            const newVars: any[] = [];
+                            let idx = 0;
+                            
+                            if (colors.length === 0) {
+                              for (const s of sizes) {
+                                newVars.push({
+                                  size: s,
+                                  color: null,
+                                  is_active: true,
+                                  sort_order: idx++,
+                                  sku: `${entrySelectedProductObj(selectedVarProductId)?.sku || 'SKU'}-${s}`,
+                                  price_cents: entrySelectedProductObj(selectedVarProductId)?.price_cents ?? 0,
+                                });
+                              }
+                            } else {
+                              for (const s of sizes) {
+                                for (const c of colors) {
+                                  newVars.push({
+                                    size: s,
+                                    color: c,
+                                    is_active: true,
+                                    sort_order: idx++,
+                                    sku: `${entrySelectedProductObj(selectedVarProductId)?.sku || 'SKU'}-${s}-${c.toUpperCase().substring(0, 3)}`,
+                                    price_cents: entrySelectedProductObj(selectedVarProductId)?.price_cents ?? 0,
+                                  });
+                                }
+                              }
+                            }
+                            setLocalVariants(newVars);
+                            toast.success(`${newVars.length} variações geradas na tela.`);
+                          }}
+                          className="text-xs font-semibold"
+                        >
+                          Gerar Grade de Variações
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setLocalVariants((vs) => [
+                              ...vs,
+                              {
+                                is_active: true,
+                                sort_order: vs.length,
+                                size: "",
+                                color: "",
+                                sku: "",
+                                barcode: "",
+                                price_cents: entrySelectedProductObj(selectedVarProductId)?.price_cents ?? 0,
+                              },
+                            ]);
+                          }}
+                          className="text-xs font-semibold"
+                        >
+                          <Plus className="h-3.5 w-3.5 mr-1" /> Add Manual
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  {hasVariantsState ? (
+                    <div className="space-y-4">
+                      {loadingDbVariants ? (
+                        <div className="flex items-center justify-center py-8">
+                          <Loader2 className="h-6 w-6 animate-spin text-amber-600" />
+                        </div>
+                      ) : localVariants.length === 0 ? (
+                        <div className="text-center py-10 border-2 border-dashed border-stone-200 rounded-lg text-stone-500">
+                          Nenhuma variação definida ainda. Clique em "Gerar Grade de Variações" ou "Add Manual" acima para iniciar.
+                        </div>
+                      ) : (
+                        <div className="overflow-x-auto border border-stone-100 rounded-lg bg-white">
+                          <table className="w-full text-sm">
+                            <thead className="bg-stone-50 text-left text-xs uppercase tracking-wider text-stone-500">
+                              <tr>
+                                <th className="p-3">Tamanho</th>
+                                <th className="p-3">Cor</th>
+                                <th className="p-3">Modelo</th>
+                                <th className="p-3">SKU</th>
+                                <th className="p-3">Código de Barras</th>
+                                <th className="p-3">Preço (R$)</th>
+                                <th className="p-3 text-center">Ações</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {localVariants.map((v, i) => (
+                                <tr key={i} className="border-t border-stone-100 hover:bg-stone-50">
+                                  <td className="p-2">
+                                    <Input
+                                      value={v.size ?? ""}
+                                      onChange={(e) =>
+                                        setLocalVariants((vs) =>
+                                          vs.map((x, j) => (j === i ? { ...x, size: e.target.value } : x))
+                                        )
+                                      }
+                                      className="h-9 w-20 text-xs"
+                                      placeholder="Ex: M"
+                                    />
+                                  </td>
+                                  <td className="p-2">
+                                    <Input
+                                      value={v.color ?? ""}
+                                      onChange={(e) =>
+                                        setLocalVariants((vs) =>
+                                          vs.map((x, j) => (j === i ? { ...x, color: e.target.value } : x))
+                                        )
+                                      }
+                                      className="h-9 w-24 text-xs"
+                                      placeholder="Ex: Preto"
+                                    />
+                                  </td>
+                                  <td className="p-2">
+                                    <Input
+                                      value={v.model ?? ""}
+                                      onChange={(e) =>
+                                        setLocalVariants((vs) =>
+                                          vs.map((x, j) => (j === i ? { ...x, model: e.target.value } : x))
+                                        )
+                                      }
+                                      className="h-9 w-24 text-xs"
+                                      placeholder="Ex: Slim"
+                                    />
+                                  </td>
+                                  <td className="p-2">
+                                    <Input
+                                      value={v.sku ?? ""}
+                                      onChange={(e) =>
+                                        setLocalVariants((vs) =>
+                                          vs.map((x, j) => (j === i ? { ...x, sku: e.target.value } : x))
+                                        )
+                                      }
+                                      className="h-9 w-32 font-mono text-xs"
+                                      placeholder="SKU-VAR"
+                                    />
+                                  </td>
+                                  <td className="p-2">
+                                    <Input
+                                      value={v.barcode ?? ""}
+                                      onChange={(e) =>
+                                        setLocalVariants((vs) =>
+                                          vs.map((x, j) => (j === i ? { ...x, barcode: e.target.value } : x))
+                                        )
+                                      }
+                                      className="h-9 w-32 font-mono text-xs"
+                                      placeholder="EAN-13"
+                                    />
+                                  </td>
+                                  <td className="p-2">
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      value={v.price_cents ? v.price_cents / 100 : ""}
+                                      onChange={(e) =>
+                                        setLocalVariants((vs) =>
+                                          vs.map((x, j) => (
+                                            j === i
+                                              ? {
+                                                  ...x,
+                                                  price_cents: e.target.value
+                                                    ? Math.round(parseFloat(e.target.value) * 100)
+                                                    : null,
+                                                }
+                                              : x
+                                          ))
+                                        )
+                                      }
+                                      className="h-9 w-24 text-xs"
+                                      placeholder="Preço R$"
+                                    />
+                                  </td>
+                                  <td className="p-2 text-center">
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() =>
+                                        setLocalVariants((vs) => vs.filter((_, j) => j !== i))
+                                      }
+                                      className="hover:bg-rose-50 rounded"
+                                    >
+                                      <Trash2 className="h-4 w-4 text-rose-600" />
+                                    </Button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="bg-stone-50 border border-stone-200 rounded-lg p-6 text-center text-stone-600">
+                      <p className="text-sm">
+                        Este produto está marcado como <strong>Variação Única</strong>.
+                      </p>
+                      <p className="text-xs text-stone-500 mt-1">
+                        Se deseja cadastrar grade de tamanhos, cores e modelos para ele, ative o switch de variações acima.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end pt-4 border-t border-stone-100">
+                    <Button
+                      onClick={() => {
+                        if (hasVariantsState && localVariants.length === 0) {
+                          return toast.error("Adicione pelo menos uma variação antes de salvar.");
+                        }
+                        // Validação simples de SKUs duplicados
+                        if (hasVariantsState) {
+                          const skus = localVariants.map((v) => v.sku?.trim()).filter(Boolean);
+                          const uniqueSkus = new Set(skus);
+                          if (skus.length !== uniqueSkus.size) {
+                            return toast.error("Aviso: Existem SKUs duplicados nas variações.");
+                          }
+                        }
+
+                        saveVariantsMut.mutate({
+                          product_id: selectedVarProductId,
+                          variants: hasVariantsState ? localVariants : [],
+                        });
+                      }}
+                      disabled={saveVariantsMut.isPending}
+                      className="bg-emerald-600 hover:bg-emerald-700 font-bold"
+                    >
+                      {saveVariantsMut.isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
+                          Sincronizando...
+                        </>
+                      ) : (
+                        "Salvar e Sincronizar Variações"
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* HISTÓRICO */}
