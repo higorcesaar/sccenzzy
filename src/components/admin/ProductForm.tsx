@@ -47,9 +47,9 @@ const schema = z.object({
   specifications: z.string().optional(),
   short_description: z.string().optional(),
   description: z.string().optional(),
-  price_brl: z.number({ message: "Informe o preço" }).min(0),
-  cost_price: z.number().min(0).optional(),
-  promo_price: z.number().min(0).optional(),
+  price_brl: z.coerce.number().min(0).optional(),
+  cost_price: z.coerce.number().min(0).optional(),
+  promo_price: z.coerce.number().min(0).optional(),
   weight_g: z.number().int().min(0).optional(),
   width_cm: z.number().min(0).optional(),
   height_cm: z.number().min(0).optional(),
@@ -312,7 +312,7 @@ export function ProductForm({ initial }: { initial?: any }) {
   }
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema) as any,
     defaultValues: {
       name: initial?.name ?? "",
       slug: initial?.slug ?? "",
@@ -369,7 +369,7 @@ export function ProductForm({ initial }: { initial?: any }) {
         specifications: v.specifications || null,
         short_description: v.short_description || null,
         description: v.description || null,
-        price_cents: Math.round(v.price_brl * 100),
+        price_cents: Math.round((v.price_brl ?? 0) * 100),
         cost_price: v.cost_price ?? null,
         promo_price: v.promo_price ? Math.round(v.promo_price * 100) : null,
         weight_g: v.weight_g ?? null,
@@ -446,7 +446,7 @@ export function ProductForm({ initial }: { initial?: any }) {
 
   return (
     <>
-      <form onSubmit={form.handleSubmit((v) => mut.mutate(v), onInvalid)} className="space-y-6">
+      <form onSubmit={form.handleSubmit((v) => mut.mutate(v as FormValues), onInvalid)} className="space-y-6">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <h1 className="font-serif text-2xl font-bold text-neutral-900">{initial?.id ? "Editar produto" : "Novo produto"}</h1>
         <div className="flex items-center gap-2">
@@ -627,7 +627,7 @@ export function ProductForm({ initial }: { initial?: any }) {
         <TabsContent value="venda">
           <Card>
             <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-6">
-              <Field label="Preço de venda (R$) *" error={form.formState.errors.price_brl?.message as string}>
+              <Field label="Preço de venda (R$)" error={form.formState.errors.price_brl?.message as string}>
                 <Input type="number" step="0.01" {...form.register("price_brl", { valueAsNumber: true })} />
               </Field>
               <Field label="Preço promocional (R$)">
