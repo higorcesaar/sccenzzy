@@ -312,7 +312,7 @@ export function ProductForm({ initial }: { initial?: any }) {
   }
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema) as any,
     defaultValues: {
       name: initial?.name ?? "",
       slug: initial?.slug ?? "",
