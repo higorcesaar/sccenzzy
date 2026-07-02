@@ -62,7 +62,13 @@ const groups: { label: string; items: Item[] }[] = [
       { title: "Hero Carousel", url: "/admin/marketing/hero", icon: Megaphone },
     ],
   },
-  { label: "Sistema", items: [{ title: "Configurações", url: "/admin/configuracoes", icon: Settings }] },
+  {
+    label: "Sistema",
+    items: [
+      { title: "Usuários", url: "/admin/usuarios", icon: Users },
+      { title: "Configurações", url: "/admin/configuracoes", icon: Settings },
+    ],
+  },
 ];
 
 export function AdminSidebar() {
