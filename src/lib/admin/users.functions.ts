@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireAdmin } from "./admin-guard";
 
-const ROLES = ["admin", "moderator", "user"] as const;
+const ROLES = ["admin", "user"] as const;
 type Role = (typeof ROLES)[number];
 
 export const listUsers = createServerFn({ method: "POST" })
