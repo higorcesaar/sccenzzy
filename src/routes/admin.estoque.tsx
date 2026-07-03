@@ -180,16 +180,7 @@ function StockPage() {
     onError: (e: any) => toast.error(e?.message || "Erro ao registrar ajuste"),
   });
 
-  const transferMut = useMutation({
-    mutationFn: useServerFn(createStockTransfer),
-    onSuccess: () => {
-      toast.success("Transferência de estoque realizada");
-      qc.invalidateQueries();
-      setOpenTransfer(false);
-      resetTransferForm();
-    },
-    onError: (e: any) => toast.error(e?.message || "Erro ao realizar transferência"),
-  });
+  // Transferência de estoque removida a pedido — usar Entrada/Saída para movimentos entre locais.
 
   const updateStockRecordFn = useServerFn(updateSingleStockRecord);
   const updateStockRecordMut = useMutation({
