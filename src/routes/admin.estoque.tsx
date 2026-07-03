@@ -395,22 +395,7 @@ function StockPage() {
     setAdjustNotes("");
   };
 
-  // Estados do Formulário de Transferência
-  const [transProductId, setTransProductId] = useState("");
-  const [transVariantId, setTransVariantId] = useState("");
-  const [transLocationFrom, setTransLocationFrom] = useState("");
-  const [transLocationTo, setTransLocationTo] = useState("");
-  const [transQty, setTransQty] = useState(1);
-  const [transNotes, setTransNotes] = useState("");
-
-  const resetTransferForm = () => {
-    setTransProductId("");
-    setTransVariantId("");
-    setTransLocationFrom("");
-    setTransLocationTo("");
-    setTransQty(1);
-    setTransNotes("");
-  };
+  // (Formulário de Transferência removido)
 
   // Auxiliares de Formatação
   const formatBRL = (cents: number) => {
