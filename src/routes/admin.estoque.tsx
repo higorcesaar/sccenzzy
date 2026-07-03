@@ -1165,7 +1165,10 @@ function StockPage() {
                         <SelectItem value="venda">Venda</SelectItem>
                         <SelectItem value="troca">Troca</SelectItem>
                         <SelectItem value="perda">Perda</SelectItem>
+                        <SelectItem value="avaria">Avaria</SelectItem>
                         <SelectItem value="danificado">Produto Danificado</SelectItem>
+                        <SelectItem value="ajuste_negativo">Ajuste −</SelectItem>
+                        <SelectItem value="consumo_interno">Consumo Interno</SelectItem>
                         <SelectItem value="brinde">Brinde</SelectItem>
                         <SelectItem value="uso_interno">Uso Interno</SelectItem>
                         <SelectItem value="garantia">Acionamento de Garantia</SelectItem>
