@@ -907,6 +907,7 @@ function StockPage() {
             </Card>
 
             {/* Card de Transferência removido a pedido — usar Entrada/Saída */}
+          </div>
 
           {/* ======================================================== */}
           {/* DIALOG DE ENTRADA */}
