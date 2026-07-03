@@ -906,19 +906,7 @@ function StockPage() {
               </CardContent>
             </Card>
 
-            <Card className="hover:border-amber-500 transition cursor-pointer" onClick={() => setOpenTransfer(true)}>
-              <CardHeader className="pb-2">
-                <Warehouse className="h-8 w-8 text-blue-600 mb-2" />
-                <CardTitle className="font-serif text-lg">Transferência de Local</CardTitle>
-                <CardDescription>Movimentar produtos entre o depósito, showroom ou loja física</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button variant="ghost" className="p-0 text-amber-600 hover:text-amber-700 font-semibold text-xs uppercase tracking-wider">
-                  Realizar Transferência &rarr;
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
+            {/* Card de Transferência removido a pedido — usar Entrada/Saída */}
 
           {/* ======================================================== */}
           {/* DIALOG DE ENTRADA */}
