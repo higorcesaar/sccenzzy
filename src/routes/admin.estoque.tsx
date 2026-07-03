@@ -1745,6 +1745,13 @@ function StockPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <StockEditModal
+        open={!!editModalProductId}
+        onOpenChange={(v) => { if (!v) setEditModalProductId(null); }}
+        productId={editModalProductId}
+        productName={editModalProductName}
+      />
     </div>
   );
 }
