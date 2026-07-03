@@ -11,7 +11,6 @@ import {
   createStockEntry,
   createStockExit,
   createStockAdjustment,
-  createStockTransfer,
   listMovements,
   listProductsForSelect,
   listBrands,
