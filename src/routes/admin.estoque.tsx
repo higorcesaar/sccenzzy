@@ -732,9 +732,8 @@ function StockPage() {
                       </TableHeader>
                       <TableBody>
                         {stockData.rows.map((row: any) => {
-                          const isEditing = editingRowId === row.id;
                           return (
-                            <TableRow key={row.id} className={isEditing ? "bg-amber-50/40" : ""}>
+                            <TableRow key={row.id}>
                               <TableCell>
                                 <div className="font-semibold text-neutral-900">{row.product?.name}</div>
                                 <div className="text-[10px] text-stone-500">{row.product?.category?.name || "—"}</div>
@@ -760,150 +759,80 @@ function StockPage() {
                                 <div className="text-[10px] text-stone-400">{row.variant?.barcode || "—"}</div>
                               </TableCell>
                               <TableCell>
-                                {isEditing ? (
-                                  <Input
-                                    value={editLocationLabel}
-                                    onChange={(e) => setEditLocationLabel(e.target.value)}
-                                    className="h-8 text-xs bg-white border border-stone-200"
-                                    placeholder="Ex: Corredor A"
-                                  />
-                                ) : (
-                                  <span className="text-xs text-stone-600">{row.location_label || "—"}</span>
-                                )}
+                                <span className="text-xs text-stone-600">{row.location_label || "—"}</span>
                               </TableCell>
                               <TableCell>
-                                {isEditing ? (
-                                  <div className="flex items-center gap-1">
-                                    <Input
-                                      type="number"
-                                      value={editQty}
-                                      onChange={(e) => setEditQty(Math.max(0, Number(e.target.value)))}
-                                      className="h-8 w-20 text-xs text-center font-bold font-mono bg-white"
-                                      min={0}
-                                    />
-                                    <span className="text-xs text-stone-500">un</span>
-                                  </div>
-                                ) : (
-                                  <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                                    <Button
-                                      variant="outline"
-                                      size="icon"
-                                      className="h-6 w-6 rounded-full border-stone-200 text-stone-600 hover:bg-stone-100 disabled:opacity-30"
-                                      onClick={() => {
-                                        if (row.qty <= 0) return;
-                                        updateStockRecordMut.mutate({
-                                          id: row.id,
-                                          qty: Math.max(0, row.qty - 1),
-                                          min_qty: row.min_qty,
-                                          location_label: row.location_label,
-                                        });
-                                      }}
-                                      disabled={updateStockRecordMut.isPending || row.qty <= 0}
-                                    >
-                                      -
-                                    </Button>
-                                    <span className="font-bold text-neutral-900 w-10 text-center font-mono text-sm">{row.qty}</span>
-                                    <Button
-                                      variant="outline"
-                                      size="icon"
-                                      className="h-6 w-6 rounded-full border-stone-200 text-stone-600 hover:bg-stone-100"
-                                      onClick={() => {
-                                        updateStockRecordMut.mutate({
-                                          id: row.id,
-                                          qty: row.qty + 1,
-                                          min_qty: row.min_qty,
-                                          location_label: row.location_label,
-                                        });
-                                      }}
-                                      disabled={updateStockRecordMut.isPending}
-                                    >
-                                      +
-                                    </Button>
-                                  </div>
-                                )}
+                                <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-6 w-6 rounded-full border-stone-200 text-stone-600 hover:bg-stone-100 disabled:opacity-30"
+                                    onClick={() => {
+                                      if (row.qty <= 0) return;
+                                      updateStockRecordMut.mutate({
+                                        id: row.id,
+                                        qty: Math.max(0, row.qty - 1),
+                                        min_qty: row.min_qty,
+                                        location_label: row.location_label,
+                                      });
+                                    }}
+                                    disabled={updateStockRecordMut.isPending || row.qty <= 0}
+                                    title="Diminuir 1 unidade"
+                                  >
+                                    -
+                                  </Button>
+                                  <span className="font-bold text-neutral-900 w-10 text-center font-mono text-sm">{row.qty}</span>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-6 w-6 rounded-full border-stone-200 text-stone-600 hover:bg-stone-100"
+                                    onClick={() => {
+                                      updateStockRecordMut.mutate({
+                                        id: row.id,
+                                        qty: row.qty + 1,
+                                        min_qty: row.min_qty,
+                                        location_label: row.location_label,
+                                      });
+                                    }}
+                                    disabled={updateStockRecordMut.isPending}
+                                    title="Aumentar 1 unidade"
+                                  >
+                                    +
+                                  </Button>
+                                </div>
                               </TableCell>
                               <TableCell>
-                                {isEditing ? (
-                                  <div className="flex items-center gap-1">
-                                    <Input
-                                      type="number"
-                                      value={editMinQty}
-                                      onChange={(e) => setEditMinQty(Math.max(0, Number(e.target.value)))}
-                                      className="h-8 w-16 text-xs text-center font-mono bg-white"
-                                      min={0}
-                                    />
-                                    <span className="text-xs text-stone-500">un</span>
-                                  </div>
-                                ) : (
-                                  <span className="text-stone-500 text-xs font-mono">{row.min_qty} un</span>
-                                )}
+                                <span className="text-stone-500 text-xs font-mono">{row.min_qty} un</span>
                               </TableCell>
-                              <TableCell>{getStatusBadge(isEditing ? editQty : row.qty, isEditing ? editMinQty : row.min_qty)}</TableCell>
+                              <TableCell>{getStatusBadge(row.qty, row.min_qty)}</TableCell>
                               <TableCell className="text-right">
                                 <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                                  {isEditing ? (
-                                    <>
-                                      <Button
-                                        variant="default"
-                                        size="sm"
-                                        onClick={() => {
-                                          updateStockRecordMut.mutate({
-                                            id: row.id,
-                                            qty: editQty,
-                                            min_qty: editMinQty,
-                                            location_label: editLocationLabel,
-                                          }, {
-                                            onSuccess: () => {
-                                              setEditingRowId(null);
-                                            }
-                                          });
-                                        }}
-                                        disabled={updateStockRecordMut.isPending}
-                                        className="h-8 text-xs bg-amber-600 hover:bg-amber-700 text-white px-2.5"
-                                      >
-                                        {updateStockRecordMut.isPending ? "Salvando..." : "Salvar"}
-                                      </Button>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => setEditingRowId(null)}
-                                        className="h-8 text-xs text-stone-600 border-stone-200 hover:bg-stone-50 px-2"
-                                      >
-                                        Cancelar
-                                      </Button>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => {
-                                          setEditingRowId(row.id);
-                                          setEditQty(row.qty);
-                                          setEditMinQty(row.min_qty);
-                                          setEditLocationLabel(row.location_label ?? "");
-                                        }}
-                                        className="h-8 text-xs text-stone-700 border-stone-200 hover:bg-stone-50 px-2 flex items-center gap-1"
-                                      >
-                                        Editar
-                                      </Button>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => {
-                                          setAdjustProductId(row.product.id);
-                                          setAdjustVariantId(row.variant?.id ?? "");
-                                          setAdjustLocationId(row.location.id);
-                                          setAdjustCountedQty(row.qty);
-                                          setAdjustNotes("Ajuste rápido via listagem de estoque");
-                                          setOpenAdjust(true);
-                                        }}
-                                        className="h-8 text-xs text-amber-700 hover:text-amber-800 border-amber-200 hover:bg-amber-50 px-2 flex items-center gap-1"
-                                      >
-                                        Ajustar
-                                      </Button>
-                                    </>
-                                  )}
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setEditModalProductId(row.product.id);
+                                      setEditModalProductName(row.product.name);
+                                    }}
+                                    className="h-8 text-xs text-stone-700 border-stone-200 hover:bg-stone-50 px-2 flex items-center gap-1"
+                                  >
+                                    Editar
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setAdjustProductId(row.product.id);
+                                      setAdjustVariantId(row.variant?.id ?? "");
+                                      setAdjustLocationId(row.location.id);
+                                      setAdjustCountedQty(row.qty);
+                                      setAdjustNotes("Ajuste rápido via listagem de estoque");
+                                      setOpenAdjust(true);
+                                    }}
+                                    className="h-8 text-xs text-amber-700 hover:text-amber-800 border-amber-200 hover:bg-amber-50 px-2 flex items-center gap-1"
+                                  >
+                                    Ajustar
+                                  </Button>
                                 </div>
                               </TableCell>
                             </TableRow>
