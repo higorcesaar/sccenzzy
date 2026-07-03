@@ -1645,7 +1645,7 @@ function StockPage() {
                     <SelectItem value="venda">Venda</SelectItem>
                     <SelectItem value="devolucao">Devolução</SelectItem>
                     <SelectItem value="ajuste">Ajuste de estoque</SelectItem>
-                    <SelectItem value="transferencia">Transferência</SelectItem>
+                    <SelectItem value="devolucao_fornecedor">Devolução ao fornecedor</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
