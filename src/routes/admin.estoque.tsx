@@ -268,7 +268,9 @@ function StockPage() {
   const [openEntry, setOpenEntry] = useState(false);
   const [openExit, setOpenExit] = useState(false);
   const [openAdjust, setOpenAdjust] = useState(false);
-  const [openTransfer, setOpenTransfer] = useState(false);
+  // Modal de edição profissional de estoque (substitui edição inline + transferência)
+  const [editModalProductId, setEditModalProductId] = useState<string | null>(null);
+  const [editModalProductName, setEditModalProductName] = useState<string>("");
 
   // Estados do Formulário de Entrada
   const [entrySupplier, setEntrySupplier] = useState("");
