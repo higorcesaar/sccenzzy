@@ -615,7 +615,19 @@ const exitSchema = z.object({
   variant_id: z.string().uuid().optional().nullable(),
   location_id: z.string().uuid(),
   quantity: z.number().int().min(1),
-  reason: z.enum(["venda", "troca", "perda", "danificado", "brinde", "uso_interno", "garantia", "outros"]),
+  reason: z.enum([
+    "venda",
+    "troca",
+    "perda",
+    "avaria",
+    "danificado",
+    "ajuste_negativo",
+    "consumo_interno",
+    "brinde",
+    "uso_interno",
+    "garantia",
+    "outros",
+  ]),
   notes: z.string().max(1000).optional().nullable(),
 });
 

@@ -11,7 +11,6 @@ import {
   createStockEntry,
   createStockExit,
   createStockAdjustment,
-  createStockTransfer,
   listMovements,
   listProductsForSelect,
   listBrands,
@@ -53,6 +52,7 @@ import {
   Trash2,
   Warehouse,
 } from "lucide-react";
+import { StockEditModal } from "@/components/admin/StockEditModal";
 import {
   AreaChart,
   Area,
@@ -180,16 +180,7 @@ function StockPage() {
     onError: (e: any) => toast.error(e?.message || "Erro ao registrar ajuste"),
   });
 
-  const transferMut = useMutation({
-    mutationFn: useServerFn(createStockTransfer),
-    onSuccess: () => {
-      toast.success("Transferência de estoque realizada");
-      qc.invalidateQueries();
-      setOpenTransfer(false);
-      resetTransferForm();
-    },
-    onError: (e: any) => toast.error(e?.message || "Erro ao realizar transferência"),
-  });
+  // Transferência de estoque removida a pedido — usar Entrada/Saída para movimentos entre locais.
 
   const updateStockRecordFn = useServerFn(updateSingleStockRecord);
   const updateStockRecordMut = useMutation({
@@ -277,7 +268,9 @@ function StockPage() {
   const [openEntry, setOpenEntry] = useState(false);
   const [openExit, setOpenExit] = useState(false);
   const [openAdjust, setOpenAdjust] = useState(false);
-  const [openTransfer, setOpenTransfer] = useState(false);
+  // Modal de edição profissional de estoque (substitui edição inline + transferência)
+  const [editModalProductId, setEditModalProductId] = useState<string | null>(null);
+  const [editModalProductName, setEditModalProductName] = useState<string>("");
 
   // Estados do Formulário de Entrada
   const [entrySupplier, setEntrySupplier] = useState("");
@@ -316,11 +309,7 @@ function StockPage() {
     setExitNotes("");
   };
 
-  // Estados para edição inline de estoques
-  const [editingRowId, setEditingRowId] = useState<string | null>(null);
-  const [editQty, setEditQty] = useState<number>(0);
-  const [editMinQty, setEditMinQty] = useState<number>(0);
-  const [editLocationLabel, setEditLocationLabel] = useState<string>("");
+  // (Edição inline removida — agora tudo pelo StockEditModal)
 
   // Estados para Gerenciamento de Variações
   const [selectedVarProductId, setSelectedVarProductId] = useState<string>("");
@@ -406,22 +395,7 @@ function StockPage() {
     setAdjustNotes("");
   };
 
-  // Estados do Formulário de Transferência
-  const [transProductId, setTransProductId] = useState("");
-  const [transVariantId, setTransVariantId] = useState("");
-  const [transLocationFrom, setTransLocationFrom] = useState("");
-  const [transLocationTo, setTransLocationTo] = useState("");
-  const [transQty, setTransQty] = useState(1);
-  const [transNotes, setTransNotes] = useState("");
-
-  const resetTransferForm = () => {
-    setTransProductId("");
-    setTransVariantId("");
-    setTransLocationFrom("");
-    setTransLocationTo("");
-    setTransQty(1);
-    setTransNotes("");
-  };
+  // (Formulário de Transferência removido)
 
   // Auxiliares de Formatação
   const formatBRL = (cents: number) => {
@@ -743,9 +717,8 @@ function StockPage() {
                       </TableHeader>
                       <TableBody>
                         {stockData.rows.map((row: any) => {
-                          const isEditing = editingRowId === row.id;
                           return (
-                            <TableRow key={row.id} className={isEditing ? "bg-amber-50/40" : ""}>
+                            <TableRow key={row.id}>
                               <TableCell>
                                 <div className="font-semibold text-neutral-900">{row.product?.name}</div>
                                 <div className="text-[10px] text-stone-500">{row.product?.category?.name || "—"}</div>
@@ -771,150 +744,80 @@ function StockPage() {
                                 <div className="text-[10px] text-stone-400">{row.variant?.barcode || "—"}</div>
                               </TableCell>
                               <TableCell>
-                                {isEditing ? (
-                                  <Input
-                                    value={editLocationLabel}
-                                    onChange={(e) => setEditLocationLabel(e.target.value)}
-                                    className="h-8 text-xs bg-white border border-stone-200"
-                                    placeholder="Ex: Corredor A"
-                                  />
-                                ) : (
-                                  <span className="text-xs text-stone-600">{row.location_label || "—"}</span>
-                                )}
+                                <span className="text-xs text-stone-600">{row.location_label || "—"}</span>
                               </TableCell>
                               <TableCell>
-                                {isEditing ? (
-                                  <div className="flex items-center gap-1">
-                                    <Input
-                                      type="number"
-                                      value={editQty}
-                                      onChange={(e) => setEditQty(Math.max(0, Number(e.target.value)))}
-                                      className="h-8 w-20 text-xs text-center font-bold font-mono bg-white"
-                                      min={0}
-                                    />
-                                    <span className="text-xs text-stone-500">un</span>
-                                  </div>
-                                ) : (
-                                  <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                                    <Button
-                                      variant="outline"
-                                      size="icon"
-                                      className="h-6 w-6 rounded-full border-stone-200 text-stone-600 hover:bg-stone-100 disabled:opacity-30"
-                                      onClick={() => {
-                                        if (row.qty <= 0) return;
-                                        updateStockRecordMut.mutate({
-                                          id: row.id,
-                                          qty: Math.max(0, row.qty - 1),
-                                          min_qty: row.min_qty,
-                                          location_label: row.location_label,
-                                        });
-                                      }}
-                                      disabled={updateStockRecordMut.isPending || row.qty <= 0}
-                                    >
-                                      -
-                                    </Button>
-                                    <span className="font-bold text-neutral-900 w-10 text-center font-mono text-sm">{row.qty}</span>
-                                    <Button
-                                      variant="outline"
-                                      size="icon"
-                                      className="h-6 w-6 rounded-full border-stone-200 text-stone-600 hover:bg-stone-100"
-                                      onClick={() => {
-                                        updateStockRecordMut.mutate({
-                                          id: row.id,
-                                          qty: row.qty + 1,
-                                          min_qty: row.min_qty,
-                                          location_label: row.location_label,
-                                        });
-                                      }}
-                                      disabled={updateStockRecordMut.isPending}
-                                    >
-                                      +
-                                    </Button>
-                                  </div>
-                                )}
+                                <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-6 w-6 rounded-full border-stone-200 text-stone-600 hover:bg-stone-100 disabled:opacity-30"
+                                    onClick={() => {
+                                      if (row.qty <= 0) return;
+                                      updateStockRecordMut.mutate({
+                                        id: row.id,
+                                        qty: Math.max(0, row.qty - 1),
+                                        min_qty: row.min_qty,
+                                        location_label: row.location_label,
+                                      });
+                                    }}
+                                    disabled={updateStockRecordMut.isPending || row.qty <= 0}
+                                    title="Diminuir 1 unidade"
+                                  >
+                                    -
+                                  </Button>
+                                  <span className="font-bold text-neutral-900 w-10 text-center font-mono text-sm">{row.qty}</span>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-6 w-6 rounded-full border-stone-200 text-stone-600 hover:bg-stone-100"
+                                    onClick={() => {
+                                      updateStockRecordMut.mutate({
+                                        id: row.id,
+                                        qty: row.qty + 1,
+                                        min_qty: row.min_qty,
+                                        location_label: row.location_label,
+                                      });
+                                    }}
+                                    disabled={updateStockRecordMut.isPending}
+                                    title="Aumentar 1 unidade"
+                                  >
+                                    +
+                                  </Button>
+                                </div>
                               </TableCell>
                               <TableCell>
-                                {isEditing ? (
-                                  <div className="flex items-center gap-1">
-                                    <Input
-                                      type="number"
-                                      value={editMinQty}
-                                      onChange={(e) => setEditMinQty(Math.max(0, Number(e.target.value)))}
-                                      className="h-8 w-16 text-xs text-center font-mono bg-white"
-                                      min={0}
-                                    />
-                                    <span className="text-xs text-stone-500">un</span>
-                                  </div>
-                                ) : (
-                                  <span className="text-stone-500 text-xs font-mono">{row.min_qty} un</span>
-                                )}
+                                <span className="text-stone-500 text-xs font-mono">{row.min_qty} un</span>
                               </TableCell>
-                              <TableCell>{getStatusBadge(isEditing ? editQty : row.qty, isEditing ? editMinQty : row.min_qty)}</TableCell>
+                              <TableCell>{getStatusBadge(row.qty, row.min_qty)}</TableCell>
                               <TableCell className="text-right">
                                 <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                                  {isEditing ? (
-                                    <>
-                                      <Button
-                                        variant="default"
-                                        size="sm"
-                                        onClick={() => {
-                                          updateStockRecordMut.mutate({
-                                            id: row.id,
-                                            qty: editQty,
-                                            min_qty: editMinQty,
-                                            location_label: editLocationLabel,
-                                          }, {
-                                            onSuccess: () => {
-                                              setEditingRowId(null);
-                                            }
-                                          });
-                                        }}
-                                        disabled={updateStockRecordMut.isPending}
-                                        className="h-8 text-xs bg-amber-600 hover:bg-amber-700 text-white px-2.5"
-                                      >
-                                        {updateStockRecordMut.isPending ? "Salvando..." : "Salvar"}
-                                      </Button>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => setEditingRowId(null)}
-                                        className="h-8 text-xs text-stone-600 border-stone-200 hover:bg-stone-50 px-2"
-                                      >
-                                        Cancelar
-                                      </Button>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => {
-                                          setEditingRowId(row.id);
-                                          setEditQty(row.qty);
-                                          setEditMinQty(row.min_qty);
-                                          setEditLocationLabel(row.location_label ?? "");
-                                        }}
-                                        className="h-8 text-xs text-stone-700 border-stone-200 hover:bg-stone-50 px-2 flex items-center gap-1"
-                                      >
-                                        Editar
-                                      </Button>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => {
-                                          setAdjustProductId(row.product.id);
-                                          setAdjustVariantId(row.variant?.id ?? "");
-                                          setAdjustLocationId(row.location.id);
-                                          setAdjustCountedQty(row.qty);
-                                          setAdjustNotes("Ajuste rápido via listagem de estoque");
-                                          setOpenAdjust(true);
-                                        }}
-                                        className="h-8 text-xs text-amber-700 hover:text-amber-800 border-amber-200 hover:bg-amber-50 px-2 flex items-center gap-1"
-                                      >
-                                        Ajustar
-                                      </Button>
-                                    </>
-                                  )}
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setEditModalProductId(row.product.id);
+                                      setEditModalProductName(row.product.name);
+                                    }}
+                                    className="h-8 text-xs text-stone-700 border-stone-200 hover:bg-stone-50 px-2 flex items-center gap-1"
+                                  >
+                                    Editar
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setAdjustProductId(row.product.id);
+                                      setAdjustVariantId(row.variant?.id ?? "");
+                                      setAdjustLocationId(row.location.id);
+                                      setAdjustCountedQty(row.qty);
+                                      setAdjustNotes("Ajuste rápido via listagem de estoque");
+                                      setOpenAdjust(true);
+                                    }}
+                                    className="h-8 text-xs text-amber-700 hover:text-amber-800 border-amber-200 hover:bg-amber-50 px-2 flex items-center gap-1"
+                                  >
+                                    Ajustar
+                                  </Button>
                                 </div>
                               </TableCell>
                             </TableRow>
@@ -988,18 +891,7 @@ function StockPage() {
               </CardContent>
             </Card>
 
-            <Card className="hover:border-amber-500 transition cursor-pointer" onClick={() => setOpenTransfer(true)}>
-              <CardHeader className="pb-2">
-                <Warehouse className="h-8 w-8 text-blue-600 mb-2" />
-                <CardTitle className="font-serif text-lg">Transferência de Local</CardTitle>
-                <CardDescription>Movimentar produtos entre o depósito, showroom ou loja física</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button variant="ghost" className="p-0 text-amber-600 hover:text-amber-700 font-semibold text-xs uppercase tracking-wider">
-                  Realizar Transferência &rarr;
-                </Button>
-              </CardContent>
-            </Card>
+            {/* Card de Transferência removido a pedido — usar Entrada/Saída */}
           </div>
 
           {/* ======================================================== */}
@@ -1273,7 +1165,10 @@ function StockPage() {
                         <SelectItem value="venda">Venda</SelectItem>
                         <SelectItem value="troca">Troca</SelectItem>
                         <SelectItem value="perda">Perda</SelectItem>
+                        <SelectItem value="avaria">Avaria</SelectItem>
                         <SelectItem value="danificado">Produto Danificado</SelectItem>
+                        <SelectItem value="ajuste_negativo">Ajuste −</SelectItem>
+                        <SelectItem value="consumo_interno">Consumo Interno</SelectItem>
                         <SelectItem value="brinde">Brinde</SelectItem>
                         <SelectItem value="uso_interno">Uso Interno</SelectItem>
                         <SelectItem value="garantia">Acionamento de Garantia</SelectItem>
@@ -1431,118 +1326,7 @@ function StockPage() {
             </DialogContent>
           </Dialog>
 
-          {/* ======================================================== */}
-          {/* DIALOG DE TRANSFERÊNCIA */}
-          {/* ======================================================== */}
-          <Dialog open={openTransfer} onOpenChange={(open) => !open && setOpenTransfer(false)}>
-            <DialogContent className="max-w-md bg-white">
-              <DialogHeader>
-                <DialogTitle className="font-serif text-xl font-bold">Transferir Estoque entre Locais</DialogTitle>
-              </DialogHeader>
-
-              <div className="space-y-4 py-2">
-                <div>
-                  <Label className="text-xs">Produto</Label>
-                  <SearchableProductSelect
-                    products={entryProducts}
-                    value={transProductId}
-                    onChange={(id) => {
-                      setTransProductId(id);
-                      setTransVariantId("");
-                    }}
-                  />
-                </div>
-
-                {transProductId && entrySelectedProductObj(transProductId)?.has_variants && (
-                  <div>
-                    <Label className="text-xs">Variação</Label>
-                    <Select value={transVariantId} onValueChange={setTransVariantId}>
-                      <SelectTrigger><SelectValue placeholder="Selecione a variação" /></SelectTrigger>
-                      <SelectContent>
-                        {(entrySelectedProductObj(transProductId)?.scz_product_variants ?? []).map((v: any) => (
-                          <SelectItem key={v.id} value={v.id}>
-                            {v.size ? `Tamanho: ${v.size}` : ""} {v.color ? `(${v.color})` : ""}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-xs">Local de Origem</Label>
-                    <Select value={transLocationFrom} onValueChange={setTransLocationFrom}>
-                      <SelectTrigger><SelectValue placeholder="Origem" /></SelectTrigger>
-                      <SelectContent>
-                        {(locations ?? []).map((l: any) => (
-                          <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-xs">Local de Destino</Label>
-                    <Select value={transLocationTo} onValueChange={setTransLocationTo}>
-                      <SelectTrigger><SelectValue placeholder="Destino" /></SelectTrigger>
-                      <SelectContent>
-                        {(locations ?? []).map((l: any) => (
-                          <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div>
-                  <Label className="text-xs">Quantidade a Transferir</Label>
-                  <Input
-                    type="number"
-                    value={transQty}
-                    onChange={(e) => setTransQty(Math.max(1, Number(e.target.value)))}
-                    min={1}
-                  />
-                </div>
-
-                <div>
-                  <Label className="text-xs">Observações</Label>
-                  <Textarea value={transNotes} onChange={(e) => setTransNotes(e.target.value)} placeholder="Detalhes sobre a transferência..." rows={2} />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 mt-4 pt-2 border-t border-stone-100">
-                <Button variant="outline" onClick={() => setOpenTransfer(false)} disabled={transferMut.isPending}>
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={() => {
-                    if (!transProductId) return toast.error("Selecione o produto");
-                    if (entrySelectedProductObj(transProductId)?.has_variants && !transVariantId) {
-                      return toast.error("Selecione a variação");
-                    }
-                    if (!transLocationFrom) return toast.error("Selecione o local de origem");
-                    if (!transLocationTo) return toast.error("Selecione o local de destino");
-                    if (transLocationFrom === transLocationTo) return toast.error("Origem e destino devem ser diferentes");
-
-                    transferMut.mutate({
-                      data: {
-                        product_id: transProductId,
-                        variant_id: transVariantId || null,
-                        location_id: transLocationFrom,
-                        location_to_id: transLocationTo,
-                        quantity: transQty,
-                        notes: transNotes || null,
-                      },
-                    });
-                  }}
-                  disabled={transferMut.isPending}
-                  className="bg-amber-600 hover:bg-amber-700"
-                >
-                  {transferMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Transferir"}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          {/* Transferência removida */}
         </TabsContent>
 
         {/* CADASTRO DE VARIAÇÕES */}
@@ -1861,7 +1645,7 @@ function StockPage() {
                     <SelectItem value="venda">Venda</SelectItem>
                     <SelectItem value="devolucao">Devolução</SelectItem>
                     <SelectItem value="ajuste">Ajuste de estoque</SelectItem>
-                    <SelectItem value="transferencia">Transferência</SelectItem>
+                    <SelectItem value="devolucao_fornecedor">Devolução ao fornecedor</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1961,6 +1745,13 @@ function StockPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <StockEditModal
+        open={!!editModalProductId}
+        onOpenChange={(v) => { if (!v) setEditModalProductId(null); }}
+        productId={editModalProductId}
+        productName={editModalProductName}
+      />
     </div>
   );
 }
