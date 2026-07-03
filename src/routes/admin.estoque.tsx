@@ -309,11 +309,7 @@ function StockPage() {
     setExitNotes("");
   };
 
-  // Estados para edição inline de estoques
-  const [editingRowId, setEditingRowId] = useState<string | null>(null);
-  const [editQty, setEditQty] = useState<number>(0);
-  const [editMinQty, setEditMinQty] = useState<number>(0);
-  const [editLocationLabel, setEditLocationLabel] = useState<string>("");
+  // (Edição inline removida — agora tudo pelo StockEditModal)
 
   // Estados para Gerenciamento de Variações
   const [selectedVarProductId, setSelectedVarProductId] = useState<string>("");
