@@ -52,6 +52,7 @@ import {
   Trash2,
   Warehouse,
 } from "lucide-react";
+import { StockEditModal } from "@/components/admin/StockEditModal";
 import {
   AreaChart,
   Area,
