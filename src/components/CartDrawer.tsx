@@ -221,13 +221,6 @@ export default function CartDrawer({ isOpen, onClose, cartItems, onUpdateQuantit
                     </span>
                   </div>
                 )}
-                {/* Cashback alert */}
-                <div className="flex justify-between text-xs text-gold-500 font-medium">
-                  <span>Cashback a receber após envio</span>
-                  <span className="font-mono">
-                    {cashbackEstimation.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                  </span>
-                </div>
                 <div className="flex justify-between text-xs text-stone-500">
                   <span>Frete</span>
                   <span className="font-mono text-emerald-600 font-semibold uppercase tracking-widest text-[10px]">
