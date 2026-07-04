@@ -189,7 +189,7 @@ export default function CartDrawer({ isOpen, onClose, cartItems, onUpdateQuantit
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      placeholder="Ex: PRIMEIROSCENZZY"
+                      placeholder="Insira seu cupom"
                       value={couponInput}
                       onChange={(e) => setCouponInput(e.target.value)}
                       className="flex-1 bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-gold-500 uppercase tracking-widest"
