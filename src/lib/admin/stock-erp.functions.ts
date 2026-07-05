@@ -331,9 +331,9 @@ export const listStock = createServerFn({ method: "POST" })
       let q = supabase
         .from("scz_stock")
         .select(
-          `id, qty, min_qty, location_label, last_movement_at,
+          `id, qty, min_qty, location_label, last_movement_at, aisle, shelf, level, bin,
            product:scz_products!inner(id,name,sku,brand,brand_id,is_active,category_id,category:scz_categories!scz_products_category_id_fkey(name)),
-           variant:scz_product_variants(id,size,color,sku,barcode),
+           variant:scz_product_variants(id,size,color,color_hex,numeration,material,sku,barcode,image_url,cost_cents,reserved_qty),
            location:scz_stock_locations!inner(id,name,slug)`,
           { count: "exact" },
         )
