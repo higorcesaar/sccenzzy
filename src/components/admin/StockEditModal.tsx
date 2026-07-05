@@ -50,8 +50,16 @@ export function StockEditModal({ open, onOpenChange, productId, productName }: P
   );
 
   const updateMut = useMutation({
-    mutationFn: (args: { id: string; qty: number; min_qty: number; location_label: string }) =>
-      updateFn({ data: args }),
+    mutationFn: (args: {
+      id: string;
+      qty: number;
+      min_qty: number;
+      location_label: string;
+      aisle?: string;
+      shelf?: string;
+      level?: string;
+      bin?: string;
+    }) => updateFn({ data: args }),
     onSuccess: () => {
       toast.success("Estoque atualizado");
       qc.invalidateQueries();
