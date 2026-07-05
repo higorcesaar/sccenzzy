@@ -678,6 +678,65 @@ export type Database = {
           },
         ]
       }
+      scz_category_attributes: {
+        Row: {
+          category_id: string
+          color_options: string[]
+          created_at: string
+          id: string
+          material_options: string[]
+          numeration_options: string[]
+          size_options: string[]
+          updated_at: string
+          uses_collection: boolean
+          uses_color: boolean
+          uses_material: boolean
+          uses_model: boolean
+          uses_numeration: boolean
+          uses_size: boolean
+        }
+        Insert: {
+          category_id: string
+          color_options?: string[]
+          created_at?: string
+          id?: string
+          material_options?: string[]
+          numeration_options?: string[]
+          size_options?: string[]
+          updated_at?: string
+          uses_collection?: boolean
+          uses_color?: boolean
+          uses_material?: boolean
+          uses_model?: boolean
+          uses_numeration?: boolean
+          uses_size?: boolean
+        }
+        Update: {
+          category_id?: string
+          color_options?: string[]
+          created_at?: string
+          id?: string
+          material_options?: string[]
+          numeration_options?: string[]
+          size_options?: string[]
+          updated_at?: string
+          uses_collection?: boolean
+          uses_color?: boolean
+          uses_material?: boolean
+          uses_model?: boolean
+          uses_numeration?: boolean
+          uses_size?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scz_category_attributes_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: true
+            referencedRelation: "scz_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scz_collections: {
         Row: {
           created_at: string
@@ -941,18 +1000,24 @@ export type Database = {
       scz_product_variants: {
         Row: {
           barcode: string | null
+          collection: string | null
           color: string | null
           color_hex: string | null
+          cost_cents: number | null
           created_at: string
+          depth_cm: number | null
           finish: string | null
+          height_cm: number | null
           id: string
           image_url: string | null
           is_active: boolean
           material: string | null
           model: string | null
+          numeration: string | null
           price_cents: number | null
           product_id: string
           promo_price: number | null
+          reserved_qty: number
           size: string | null
           sku: string | null
           sort_order: number
@@ -960,21 +1025,28 @@ export type Database = {
           stock_qty: number
           updated_at: string
           weight_g: number | null
+          width_cm: number | null
         }
         Insert: {
           barcode?: string | null
+          collection?: string | null
           color?: string | null
           color_hex?: string | null
+          cost_cents?: number | null
           created_at?: string
+          depth_cm?: number | null
           finish?: string | null
+          height_cm?: number | null
           id?: string
           image_url?: string | null
           is_active?: boolean
           material?: string | null
           model?: string | null
+          numeration?: string | null
           price_cents?: number | null
           product_id: string
           promo_price?: number | null
+          reserved_qty?: number
           size?: string | null
           sku?: string | null
           sort_order?: number
@@ -982,21 +1054,28 @@ export type Database = {
           stock_qty?: number
           updated_at?: string
           weight_g?: number | null
+          width_cm?: number | null
         }
         Update: {
           barcode?: string | null
+          collection?: string | null
           color?: string | null
           color_hex?: string | null
+          cost_cents?: number | null
           created_at?: string
+          depth_cm?: number | null
           finish?: string | null
+          height_cm?: number | null
           id?: string
           image_url?: string | null
           is_active?: boolean
           material?: string | null
           model?: string | null
+          numeration?: string | null
           price_cents?: number | null
           product_id?: string
           promo_price?: number | null
+          reserved_qty?: number
           size?: string | null
           sku?: string | null
           sort_order?: number
@@ -1004,6 +1083,7 @@ export type Database = {
           stock_qty?: number
           updated_at?: string
           weight_g?: number | null
+          width_cm?: number | null
         }
         Relationships: [
           {
@@ -1211,38 +1291,50 @@ export type Database = {
       }
       scz_stock: {
         Row: {
+          aisle: string | null
+          bin: string | null
           created_at: string
           id: string
           last_movement_at: string | null
+          level: string | null
           location_id: string
           location_label: string | null
           min_qty: number
           product_id: string
           qty: number
+          shelf: string | null
           updated_at: string
           variant_id: string | null
         }
         Insert: {
+          aisle?: string | null
+          bin?: string | null
           created_at?: string
           id?: string
           last_movement_at?: string | null
+          level?: string | null
           location_id: string
           location_label?: string | null
           min_qty?: number
           product_id: string
           qty?: number
+          shelf?: string | null
           updated_at?: string
           variant_id?: string | null
         }
         Update: {
+          aisle?: string | null
+          bin?: string | null
           created_at?: string
           id?: string
           last_movement_at?: string | null
+          level?: string | null
           location_id?: string
           location_label?: string | null
           min_qty?: number
           product_id?: string
           qty?: number
+          shelf?: string | null
           updated_at?: string
           variant_id?: string | null
         }

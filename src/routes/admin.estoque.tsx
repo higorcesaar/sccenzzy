@@ -51,8 +51,10 @@ import {
   Loader2,
   Trash2,
   Warehouse,
+  Sparkles,
 } from "lucide-react";
 import { StockEditModal } from "@/components/admin/StockEditModal";
+import { GenerateVariantsModal } from "@/components/admin/GenerateVariantsModal";
 import {
   AreaChart,
   Area,
@@ -271,6 +273,7 @@ function StockPage() {
   // Modal de edição profissional de estoque (substitui edição inline + transferência)
   const [editModalProductId, setEditModalProductId] = useState<string | null>(null);
   const [editModalProductName, setEditModalProductName] = useState<string>("");
+  const [genModalOpen, setGenModalOpen] = useState(false);
 
   // Estados do Formulário de Entrada
   const [entrySupplier, setEntrySupplier] = useState("");
@@ -1381,6 +1384,14 @@ function StockPage() {
                         <Button
                           type="button"
                           size="sm"
+                          className="bg-amber-600 hover:bg-amber-700 text-white"
+                          onClick={() => setGenModalOpen(true)}
+                        >
+                          <Sparkles className="h-4 w-4 mr-1" /> Gerar Variações Automaticamente
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
                           variant="outline"
                           onClick={() => {
                             const sizesStr = prompt("Tamanhos (separados por vírgula). Ex: PP,P,M,G,GG ou 36,38,40,42");
@@ -1751,6 +1762,14 @@ function StockPage() {
         onOpenChange={(v) => { if (!v) setEditModalProductId(null); }}
         productId={editModalProductId}
         productName={editModalProductName}
+      />
+
+      <GenerateVariantsModal
+        open={genModalOpen}
+        onOpenChange={setGenModalOpen}
+        productId={selectedVarProductId || null}
+        productName={entrySelectedProductObj(selectedVarProductId)?.name}
+        categoryId={entrySelectedProductObj(selectedVarProductId)?.category_id ?? null}
       />
     </div>
   );
