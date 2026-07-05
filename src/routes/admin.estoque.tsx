@@ -1386,7 +1386,10 @@ function StockPage() {
                         >
                           <Sparkles className="h-4 w-4 mr-1" /> Gerar Variações Automaticamente
                         </Button>
+                        <Button
                           type="button"
+                          size="sm"
+                          variant="outline"
                           size="sm"
                           variant="outline"
                           onClick={() => {
