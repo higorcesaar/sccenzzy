@@ -273,6 +273,7 @@ function StockPage() {
   // Modal de edição profissional de estoque (substitui edição inline + transferência)
   const [editModalProductId, setEditModalProductId] = useState<string | null>(null);
   const [editModalProductName, setEditModalProductName] = useState<string>("");
+  const [genModalOpen, setGenModalOpen] = useState(false);
 
   // Estados do Formulário de Entrada
   const [entrySupplier, setEntrySupplier] = useState("");
