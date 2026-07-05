@@ -183,10 +183,12 @@ export function StockEditModal({ open, onOpenChange, productId, productName }: P
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-stone-50">
+                        <TableHead className="w-14">Foto</TableHead>
                         <TableHead>Variação</TableHead>
                         <TableHead>Local</TableHead>
                         <TableHead>SKU / Barras</TableHead>
-                        <TableHead>Localização física</TableHead>
+                        <TableHead>Material</TableHead>
+                        <TableHead>Localização física (Corr. / Prat. / Nível / Caixa)</TableHead>
                         <TableHead className="w-40 text-center">Quantidade</TableHead>
                         <TableHead className="w-24">Mínimo</TableHead>
                         <TableHead>Status</TableHead>
@@ -197,18 +199,48 @@ export function StockEditModal({ open, onOpenChange, productId, productName }: P
                       {rows.map((row: any) => {
                         const d = getDraft(row);
                         const pending = updateMut.isPending;
+                        const commit = (qty: number) =>
+                          updateMut.mutate({
+                            id: row.id,
+                            qty,
+                            min_qty: d.min_qty,
+                            location_label: d.location_label,
+                            aisle: d.aisle,
+                            shelf: d.shelf,
+                            level: d.level,
+                            bin: d.bin,
+                          });
                         return (
                           <TableRow key={row.id}>
                             <TableCell>
+                              {row.variant?.image_url ? (
+                                <img
+                                  src={row.variant.image_url}
+                                  alt=""
+                                  className="h-10 w-10 rounded object-cover border border-stone-200"
+                                />
+                              ) : (
+                                <div className="h-10 w-10 rounded bg-stone-100 border border-stone-200" />
+                              )}
+                            </TableCell>
+                            <TableCell>
                               {row.variant ? (
-                                <div className="text-xs">
-                                  {row.variant.size && (
+                                <div className="text-xs space-y-0.5">
+                                  {(row.variant.numeration || row.variant.size) && (
                                     <Badge variant="outline" className="mr-1">
-                                      {row.variant.size}
+                                      {row.variant.numeration || row.variant.size}
                                     </Badge>
                                   )}
                                   {row.variant.color && (
-                                    <span className="text-stone-600">{row.variant.color}</span>
+                                    <span className="inline-flex items-center gap-1 text-stone-600">
+                                      {row.variant.color_hex && (
+                                        <span
+                                          className="inline-block h-2.5 w-2.5 rounded-full border border-stone-300"
+                                          style={{ backgroundColor: row.variant.color_hex }}
+                                        />
+                                      )}
+                                      {row.variant.color}
+                                    </span>
                                   )}
                                 </div>
                               ) : (
@@ -225,17 +257,40 @@ export function StockEditModal({ open, onOpenChange, productId, productName }: P
                               <div className="text-xs font-mono">
                                 {row.variant?.sku || row.product?.sku || "—"}
                               </div>
-                              <div className="text-[10px] text-stone-400">
+                              <div className="text-[10px] text-stone-400 font-mono">
                                 {row.variant?.barcode || "—"}
                               </div>
                             </TableCell>
+                            <TableCell className="text-xs text-stone-600">
+                              {row.variant?.material || "—"}
+                            </TableCell>
                             <TableCell>
-                              <Input
-                                value={d.location_label}
-                                onChange={(e) => setDraft(row.id, { location_label: e.target.value })}
-                                className="h-8 text-xs bg-white"
-                                placeholder="Ex: Corredor A"
-                              />
+                              <div className="grid grid-cols-4 gap-1 min-w-[240px]">
+                                <Input
+                                  value={d.aisle}
+                                  onChange={(e) => setDraft(row.id, { aisle: e.target.value })}
+                                  className="h-8 text-[11px] text-center bg-white"
+                                  placeholder="Corr."
+                                />
+                                <Input
+                                  value={d.shelf}
+                                  onChange={(e) => setDraft(row.id, { shelf: e.target.value })}
+                                  className="h-8 text-[11px] text-center bg-white"
+                                  placeholder="Prat."
+                                />
+                                <Input
+                                  value={d.level}
+                                  onChange={(e) => setDraft(row.id, { level: e.target.value })}
+                                  className="h-8 text-[11px] text-center bg-white"
+                                  placeholder="Nível"
+                                />
+                                <Input
+                                  value={d.bin}
+                                  onChange={(e) => setDraft(row.id, { bin: e.target.value })}
+                                  className="h-8 text-[11px] text-center bg-white"
+                                  placeholder="Caixa"
+                                />
+                              </div>
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center justify-center gap-1">
@@ -244,14 +299,7 @@ export function StockEditModal({ open, onOpenChange, productId, productName }: P
                                   size="icon"
                                   className="h-7 w-7 rounded-full"
                                   disabled={pending || row.qty <= 0}
-                                  onClick={() =>
-                                    updateMut.mutate({
-                                      id: row.id,
-                                      qty: Math.max(0, row.qty - 1),
-                                      min_qty: d.min_qty,
-                                      location_label: d.location_label,
-                                    })
-                                  }
+                                  onClick={() => commit(Math.max(0, row.qty - 1))}
                                 >
                                   <Minus className="h-3.5 w-3.5" />
                                 </Button>
@@ -263,14 +311,7 @@ export function StockEditModal({ open, onOpenChange, productId, productName }: P
                                   size="icon"
                                   className="h-7 w-7 rounded-full"
                                   disabled={pending}
-                                  onClick={() =>
-                                    updateMut.mutate({
-                                      id: row.id,
-                                      qty: row.qty + 1,
-                                      min_qty: d.min_qty,
-                                      location_label: d.location_label,
-                                    })
-                                  }
+                                  onClick={() => commit(row.qty + 1)}
                                 >
                                   <Plus className="h-3.5 w-3.5" />
                                 </Button>
@@ -293,14 +334,7 @@ export function StockEditModal({ open, onOpenChange, productId, productName }: P
                                 size="sm"
                                 className="h-8 bg-amber-600 hover:bg-amber-700 text-white text-xs"
                                 disabled={pending}
-                                onClick={() =>
-                                  updateMut.mutate({
-                                    id: row.id,
-                                    qty: row.qty,
-                                    min_qty: d.min_qty,
-                                    location_label: d.location_label,
-                                  })
-                                }
+                                onClick={() => commit(row.qty)}
                               >
                                 <Save className="h-3.5 w-3.5 mr-1" /> Salvar
                               </Button>
