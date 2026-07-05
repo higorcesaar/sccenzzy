@@ -1390,8 +1390,6 @@ function StockPage() {
                           type="button"
                           size="sm"
                           variant="outline"
-                          size="sm"
-                          variant="outline"
                           onClick={() => {
                             const sizesStr = prompt("Tamanhos (separados por vírgula). Ex: PP,P,M,G,GG ou 36,38,40,42");
                             if (!sizesStr) return;
