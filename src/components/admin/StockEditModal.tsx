@@ -59,13 +59,31 @@ export function StockEditModal({ open, onOpenChange, productId, productName }: P
     onError: (e: any) => toast.error(e?.message || "Erro ao atualizar"),
   });
 
-  // Local drafts per row for min/label; qty is instant via +/-
-  const [drafts, setDrafts] = useState<Record<string, { min_qty: number; location_label: string }>>({});
-  const getDraft = (r: any) =>
-    drafts[r.id] ?? { min_qty: r.min_qty ?? 0, location_label: r.location_label ?? "" };
+  // Local drafts per row for editable fields; qty is instant via +/-
+  type Draft = {
+    min_qty: number;
+    location_label: string;
+    aisle: string;
+    shelf: string;
+    level: string;
+    bin: string;
+  };
+  const [drafts, setDrafts] = useState<Record<string, Draft>>({});
+  const getDraft = (r: any): Draft =>
+    drafts[r.id] ?? {
+      min_qty: r.min_qty ?? 0,
+      location_label: r.location_label ?? "",
+      aisle: r.aisle ?? "",
+      shelf: r.shelf ?? "",
+      level: r.level ?? "",
+      bin: r.bin ?? "",
+    };
 
-  const setDraft = (id: string, patch: Partial<{ min_qty: number; location_label: string }>) =>
-    setDrafts((d) => ({ ...d, [id]: { ...getDraft({ id, min_qty: 0, location_label: "" }), ...patch } }));
+  const setDraft = (id: string, patch: Partial<Draft>) =>
+    setDrafts((d) => ({
+      ...d,
+      [id]: { ...(d[id] ?? { min_qty: 0, location_label: "", aisle: "", shelf: "", level: "", bin: "" }), ...patch },
+    }));
 
   const statusBadge = (qty: number, min: number) => {
     if (qty <= 0) return <Badge className="bg-rose-100 text-rose-700 hover:bg-rose-100">Sem estoque</Badge>;
