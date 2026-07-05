@@ -749,7 +749,7 @@ export const listProductsForSelect = createServerFn({ method: "GET" })
     const { supabase } = context as any;
     const { data, error } = await supabase
       .from("scz_products")
-      .select("id,name,sku,has_variants,stock_qty,scz_product_variants(id,size,color,sku,stock_qty)")
+      .select("id,name,sku,has_variants,stock_qty,category_id,price_cents,scz_product_variants(id,size,color,sku,stock_qty)")
       .eq("is_active", true)
       .order("name")
       .limit(1000);
