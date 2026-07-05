@@ -943,6 +943,10 @@ const updateStockRecordSchema = z.object({
   qty: z.number().int().min(0),
   min_qty: z.number().int().min(0),
   location_label: z.string().max(200).optional().nullable(),
+  aisle: z.string().max(40).optional().nullable(),
+  shelf: z.string().max(40).optional().nullable(),
+  level: z.string().max(40).optional().nullable(),
+  bin: z.string().max(40).optional().nullable(),
 });
 
 export const updateSingleStockRecord = createServerFn({ method: "POST" })
@@ -950,16 +954,14 @@ export const updateSingleStockRecord = createServerFn({ method: "POST" })
   .inputValidator((i: unknown) => updateStockRecordSchema.parse(i))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context as any;
-    
-    // 1. Fetch current record
+
     const { data: current, error: getErr } = await supabase
       .from("scz_stock")
       .select("*")
       .eq("id", data.id)
       .single();
     if (getErr) throw new Error(getErr.message);
-    
-    // 2. If qty changed, insert adjustment movement
+
     const delta = data.qty - current.qty;
     if (delta !== 0) {
       const { error: moveErr } = await supabase.from("scz_stock_movements").insert({
@@ -973,17 +975,22 @@ export const updateSingleStockRecord = createServerFn({ method: "POST" })
       });
       if (moveErr) throw new Error(moveErr.message);
     }
-    
-    // 3. Update min_qty and location_label directly
+
+    const patch: any = {
+      min_qty: data.min_qty,
+      location_label: data.location_label ?? current.location_label ?? null,
+    };
+    if (data.aisle !== undefined) patch.aisle = data.aisle;
+    if (data.shelf !== undefined) patch.shelf = data.shelf;
+    if (data.level !== undefined) patch.level = data.level;
+    if (data.bin !== undefined) patch.bin = data.bin;
+
     const { error: updErr } = await supabase
       .from("scz_stock")
-      .update({
-        min_qty: data.min_qty,
-        location_label: data.location_label,
-      })
+      .update(patch)
       .eq("id", data.id);
     if (updErr) throw new Error(updErr.message);
-    
+
     return { ok: true, delta };
   });
 
