@@ -1763,6 +1763,14 @@ function StockPage() {
         productId={editModalProductId}
         productName={editModalProductName}
       />
+
+      <GenerateVariantsModal
+        open={genModalOpen}
+        onOpenChange={setGenModalOpen}
+        productId={selectedVarProductId || null}
+        productName={entrySelectedProductObj(selectedVarProductId)?.name}
+        categoryId={entrySelectedProductObj(selectedVarProductId)?.category_id ?? null}
+      />
     </div>
   );
 }
