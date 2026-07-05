@@ -1381,6 +1381,13 @@ function StockPage() {
                         <Button
                           type="button"
                           size="sm"
+                          className="bg-amber-600 hover:bg-amber-700 text-white"
+                          onClick={() => setGenModalOpen(true)}
+                        >
+                          <Sparkles className="h-4 w-4 mr-1" /> Gerar Variações Automaticamente
+                        </Button>
+                          type="button"
+                          size="sm"
                           variant="outline"
                           onClick={() => {
                             const sizesStr = prompt("Tamanhos (separados por vírgula). Ex: PP,P,M,G,GG ou 36,38,40,42");
