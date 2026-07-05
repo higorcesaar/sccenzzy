@@ -51,8 +51,10 @@ import {
   Loader2,
   Trash2,
   Warehouse,
+  Sparkles,
 } from "lucide-react";
 import { StockEditModal } from "@/components/admin/StockEditModal";
+import { GenerateVariantsModal } from "@/components/admin/GenerateVariantsModal";
 import {
   AreaChart,
   Area,
