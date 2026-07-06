@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { listPublicHeroSlides } from "../lib/hero-carousel.functions";
 import { getCampaignVideo } from "../lib/campaign.functions";
+import { resolveVideoEmbed } from "../lib/video-embed";
 
 export default function CampaignBanner() {
   const [isMuted, setIsMuted] = useState(true);
@@ -99,40 +100,56 @@ export default function CampaignBanner() {
 
         {/* Video Frame Mockup - Vimeo section replacement */}
         <div className="relative w-full max-w-md aspect-[3/4.5] rounded-3xl overflow-hidden border border-stone-200 shadow-xl bg-white group">
-          
-          {/* Autoplay Video Loop */}
-          <video
-            ref={videoRef}
-            src={videoUrl}
-            autoPlay
-            loop
-            muted={isMuted}
-            playsInline
-            className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
-          />
+          {(() => {
+            const resolved = resolveVideoEmbed(videoUrl);
+            if (resolved?.kind === "iframe") {
+              return (
+                <iframe
+                  key={resolved.src}
+                  src={resolved.src}
+                  className="w-full h-full"
+                  frameBorder={0}
+                  allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                  allowFullScreen
+                />
+              );
+            }
+            return (
+              <>
+                <video
+                  ref={videoRef}
+                  src={resolved?.src || videoUrl}
+                  autoPlay
+                  loop
+                  muted={isMuted}
+                  playsInline
+                  className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
+                />
+                <div className="absolute bottom-5 right-5 flex gap-2">
+                  <button
+                    onClick={togglePlay}
+                    className="bg-white/80 hover:bg-white hover:scale-105 active:scale-95 text-neutral-900 p-3 rounded-full border border-stone-200 transition-all focus:outline-none shadow-md"
+                    aria-label={isPlaying ? 'Pausar' : 'Play'}
+                  >
+                    {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                  </button>
+                  <button
+                    onClick={toggleMute}
+                    className="bg-white/80 hover:bg-white hover:scale-105 active:scale-95 text-neutral-900 p-3 rounded-full border border-stone-200 transition-all focus:outline-none shadow-md"
+                    aria-label={isMuted ? 'Ativar Áudio' : 'Desativar Áudio'}
+                  >
+                    {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                  </button>
+                </div>
+              </>
+            );
+          })()}
 
-          {/* Interactive Player Controls */}
-          <div className="absolute bottom-5 right-5 flex gap-2">
-            <button
-              onClick={togglePlay}
-              className="bg-white/80 hover:bg-white hover:scale-105 active:scale-95 text-neutral-900 p-3 rounded-full border border-stone-200 transition-all focus:outline-none shadow-md"
-              aria-label={isPlaying ? 'Pausar' : 'Play'}
-            >
-              {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-            </button>
-            <button
-              onClick={toggleMute}
-              className="bg-white/80 hover:bg-white hover:scale-105 active:scale-95 text-neutral-900 p-3 rounded-full border border-stone-200 transition-all focus:outline-none shadow-md"
-              aria-label={isMuted ? 'Ativar Áudio' : 'Desativar Áudio'}
-            >
-              {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-            </button>
-          </div>
-
-          <div className="absolute top-5 left-5 bg-white/80 border border-stone-200 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 text-neutral-900 text-[10px] uppercase font-bold tracking-widest shadow-sm">
+          <div className="absolute top-5 left-5 bg-white/80 border border-stone-200 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 text-neutral-900 text-[10px] uppercase font-bold tracking-widest shadow-sm z-10">
             <Sparkles className="h-3 w-3 text-gold-500 animate-spin" /> Campanha Editorial
           </div>
         </div>
+
 
       </div>
     </section>

@@ -7,11 +7,46 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { getCampaignVideo, updateCampaignVideo } from "@/lib/campaign.functions";
 import { Loader2, Upload, ShieldCheck, ImageIcon, Film, Save } from "lucide-react";
+import { resolveVideoEmbed } from "@/lib/video-embed";
 
 export const Route = createFileRoute("/admin/editor")({
   head: () => ({ meta: [{ title: "Admin · Editor de mídia | Scenzzy" }] }),
   component: AdminEditorPage,
 });
+
+
+function CampaignVideoPreview({ url }: { url: string }) {
+  const resolved = resolveVideoEmbed(url);
+  if (!resolved) {
+    return (
+      <div className="text-stone-400 text-[10px] uppercase tracking-widest font-bold p-4 text-center">
+        URL inválida
+      </div>
+    );
+  }
+  if (resolved.kind === "video") {
+    return (
+      <video
+        key={resolved.src}
+        src={resolved.src}
+        muted
+        controls
+        playsInline
+        className="w-full h-full object-cover"
+      />
+    );
+  }
+  return (
+    <iframe
+      key={resolved.src}
+      src={resolved.src}
+      className="w-full h-full"
+      frameBorder={0}
+      allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+      allowFullScreen
+    />
+  );
+}
 
 function AdminEditorPage() {
   const { user, role, loading } = useAuth();
@@ -286,14 +321,8 @@ function AdminEditorPage() {
 
                 {campaignForm.url ? (
                   <div className="rounded-2xl overflow-hidden border border-stone-200 bg-stone-50 aspect-video relative flex items-center justify-center">
-                    <video
-                      key={campaignForm.url}
-                      src={campaignForm.url}
-                      muted
-                      controls
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute top-2 left-2 bg-black/70 px-2 py-0.5 rounded text-[8px] uppercase font-bold tracking-wider text-white">
+                    <CampaignVideoPreview url={campaignForm.url} />
+                    <div className="absolute top-2 left-2 bg-black/70 px-2 py-0.5 rounded text-[8px] uppercase font-bold tracking-wider text-white z-10">
                       Pré-visualização do Vídeo
                     </div>
                   </div>
