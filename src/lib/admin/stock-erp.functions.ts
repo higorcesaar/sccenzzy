@@ -121,8 +121,8 @@ async function ensureDefaultStockData(supabase: any) {
       const { data: newLoc, error: insLocErr } = await supabase
         .from("scz_stock_locations")
         .insert({
-          name: "CD Cariacica - Central",
-          slug: "cd-cariacica-central",
+          name: "Depósito",
+          slug: "deposito",
           is_default: true,
           is_active: true,
           sort_order: 1,
@@ -132,7 +132,9 @@ async function ensureDefaultStockData(supabase: any) {
       if (insLocErr) throw new Error(insLocErr.message);
       defaultLocId = newLoc.id;
     } else {
-      defaultLocId = locs[0].id;
+      // Find 'deposito' or use the first one
+      const dep = locs.find((l: any) => l.slug === "deposito");
+      defaultLocId = dep ? dep.id : locs[0].id;
     }
 
     // 2. Garante que exista pelo menos um fornecedor
@@ -331,9 +333,9 @@ export const listStock = createServerFn({ method: "POST" })
       let q = supabase
         .from("scz_stock")
         .select(
-          `id, qty, min_qty, location_label, last_movement_at, aisle, shelf, level, bin,
+          `id, qty, min_qty, location_label, last_movement_at,
            product:scz_products!inner(id,name,sku,brand,brand_id,is_active,category_id,category:scz_categories!scz_products_category_id_fkey(name)),
-           variant:scz_product_variants(id,size,color,color_hex,numeration,material,sku,barcode,image_url,cost_cents,reserved_qty),
+           variant:scz_product_variants(id,size,color,sku,barcode),
            location:scz_stock_locations!inner(id,name,slug)`,
           { count: "exact" },
         )
@@ -615,19 +617,7 @@ const exitSchema = z.object({
   variant_id: z.string().uuid().optional().nullable(),
   location_id: z.string().uuid(),
   quantity: z.number().int().min(1),
-  reason: z.enum([
-    "venda",
-    "troca",
-    "perda",
-    "avaria",
-    "danificado",
-    "ajuste_negativo",
-    "consumo_interno",
-    "brinde",
-    "uso_interno",
-    "garantia",
-    "outros",
-  ]),
+  reason: z.enum(["venda", "troca", "perda", "danificado", "brinde", "uso_interno", "garantia", "outros"]),
   notes: z.string().max(1000).optional().nullable(),
 });
 
@@ -749,7 +739,7 @@ export const listProductsForSelect = createServerFn({ method: "GET" })
     const { supabase } = context as any;
     const { data, error } = await supabase
       .from("scz_products")
-      .select("id,name,sku,has_variants,stock_qty,category_id,price_cents,scz_product_variants(id,size,color,sku,stock_qty)")
+      .select("id,name,sku,has_variants,stock_qty,scz_product_variants(id,size,color,sku,stock_qty)")
       .eq("is_active", true)
       .order("name")
       .limit(1000);
@@ -943,10 +933,6 @@ const updateStockRecordSchema = z.object({
   qty: z.number().int().min(0),
   min_qty: z.number().int().min(0),
   location_label: z.string().max(200).optional().nullable(),
-  aisle: z.string().max(40).optional().nullable(),
-  shelf: z.string().max(40).optional().nullable(),
-  level: z.string().max(40).optional().nullable(),
-  bin: z.string().max(40).optional().nullable(),
 });
 
 export const updateSingleStockRecord = createServerFn({ method: "POST" })
@@ -954,14 +940,16 @@ export const updateSingleStockRecord = createServerFn({ method: "POST" })
   .inputValidator((i: unknown) => updateStockRecordSchema.parse(i))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context as any;
-
+    
+    // 1. Fetch current record
     const { data: current, error: getErr } = await supabase
       .from("scz_stock")
       .select("*")
       .eq("id", data.id)
       .single();
     if (getErr) throw new Error(getErr.message);
-
+    
+    // 2. If qty changed, insert adjustment movement
     const delta = data.qty - current.qty;
     if (delta !== 0) {
       const { error: moveErr } = await supabase.from("scz_stock_movements").insert({
@@ -975,23 +963,292 @@ export const updateSingleStockRecord = createServerFn({ method: "POST" })
       });
       if (moveErr) throw new Error(moveErr.message);
     }
-
-    const patch: any = {
-      min_qty: data.min_qty,
-      location_label: data.location_label ?? current.location_label ?? null,
-    };
-    if (data.aisle !== undefined) patch.aisle = data.aisle;
-    if (data.shelf !== undefined) patch.shelf = data.shelf;
-    if (data.level !== undefined) patch.level = data.level;
-    if (data.bin !== undefined) patch.bin = data.bin;
-
+    
+    // 3. Update min_qty and location_label directly
     const { error: updErr } = await supabase
       .from("scz_stock")
-      .update(patch)
+      .update({
+        min_qty: data.min_qty,
+        location_label: data.location_label,
+      })
       .eq("id", data.id);
     if (updErr) throw new Error(updErr.message);
-
+    
     return { ok: true, delta };
   });
+
+export const syncProductAndStockUnified = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((i: unknown) => {
+    return z.object({
+      product_id: z.string().uuid(),
+      has_variants: z.boolean(),
+      variants: z.array(z.object({
+        id: z.string().uuid().optional().nullable(),
+        size: z.string().max(40).optional().nullable(),
+        color: z.string().max(40).optional().nullable(),
+        sku: z.string().max(60).optional().nullable(),
+        barcode: z.string().max(60).optional().nullable(),
+        price_cents: z.number().int().min(0).optional().nullable(),
+        is_active: z.boolean().default(true),
+        stockItems: z.array(z.object({
+          location_id: z.string().uuid(),
+          qty: z.number().int().min(0).optional().nullable().transform((v) => v ?? 0),
+          min_qty: z.number().int().min(0).optional().nullable().transform((v) => v ?? 0),
+          location_label: z.string().max(200).optional().nullable(),
+        })),
+      })),
+    }).parse(i);
+  })
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context as any;
+
+    try {
+      // 1. Update has_variants status on the product
+      const { error: prodErr } = await supabase
+        .from("scz_products")
+        .update({ has_variants: data.has_variants })
+        .eq("id", data.product_id);
+      if (prodErr) throw new Error(prodErr.message);
+
+      // 2. Fetch existing variants
+      const { data: existingVars } = await supabase
+        .from("scz_product_variants")
+        .select("id")
+        .eq("product_id", data.product_id);
+
+      const existingVarIds = new Set<string>((existingVars ?? []).map((v: any) => v.id));
+      const sentVarIds = new Set<string>(data.variants.filter((v) => v.id).map((v) => v.id as string));
+
+      // 3. Delete removed variants
+      const varsToDelete = [...existingVarIds].filter((id) => !sentVarIds.has(id));
+      if (varsToDelete.length > 0) {
+        // Delete stock records associated with deleted variants first
+        await supabase.from("scz_stock").delete().in("variant_id", varsToDelete);
+        const { error: delErr } = await supabase.from("scz_product_variants").delete().in("id", varsToDelete);
+        if (delErr) throw new Error(delErr.message);
+      }
+
+      // 4. Save variations and their stock items
+      for (const v of data.variants) {
+        let variantId = v.id;
+
+        if (data.has_variants) {
+          const payload: any = {
+            product_id: data.product_id,
+            sku: v.sku || null,
+            size: v.size || null,
+            color: v.color || null,
+            barcode: v.barcode || null,
+            price_cents: v.price_cents || null,
+            is_active: v.is_active,
+          };
+
+          if (variantId) {
+            const { error: updVarErr } = await supabase
+              .from("scz_product_variants")
+              .update(payload)
+              .eq("id", variantId);
+            if (updVarErr) throw new Error(updVarErr.message);
+          } else {
+            const { data: newVar, error: insVarErr } = await supabase
+              .from("scz_product_variants")
+              .insert(payload)
+              .select("id")
+              .single();
+            if (insVarErr) throw new Error(insVarErr.message);
+            variantId = newVar.id;
+          }
+        } else {
+          variantId = null; // Single product has no variant_id
+        }
+
+        // Fetch existing stock records for this (variant_id, product_id)
+        const query = supabase
+          .from("scz_stock")
+          .select("*")
+          .eq("product_id", data.product_id);
+        
+        const { data: existingStock, error: stockFetchErr } = variantId
+          ? await query.eq("variant_id", variantId)
+          : await query.is("variant_id", null);
+
+        if (stockFetchErr) throw new Error(stockFetchErr.message);
+
+        const existingStockMap = new Map<string, any>();
+        for (const st of existingStock ?? []) {
+          existingStockMap.set(st.location_id, st);
+        }
+
+        // Sync stock items for each location sent for this variation
+        for (const stockItem of v.stockItems) {
+          const currentStock = existingStockMap.get(stockItem.location_id);
+
+          if (currentStock) {
+            // Update quantity via stock movement if it changed
+            const delta = stockItem.qty - currentStock.qty;
+            if (delta !== 0) {
+              const { error: moveErr } = await supabase.from("scz_stock_movements").insert({
+                product_id: data.product_id,
+                variant_id: variantId,
+                location_id: stockItem.location_id,
+                movement_type: "ajuste",
+                quantity: delta,
+                reason: "Ajuste manual via Painel Unificado de Estoque",
+                user_id: userId,
+              });
+              if (moveErr) throw new Error(moveErr.message);
+            }
+
+            // Update min_qty, qty, and location_label if any of them changed
+            if (stockItem.qty !== currentStock.qty || stockItem.min_qty !== currentStock.min_qty || stockItem.location_label !== currentStock.location_label) {
+              const { error: updStockErr } = await supabase
+                .from("scz_stock")
+                .update({
+                  qty: stockItem.qty, // Keep in sync
+                  min_qty: stockItem.min_qty,
+                  location_label: stockItem.location_label,
+                })
+                .eq("id", currentStock.id);
+              if (updStockErr) throw new Error(updStockErr.message);
+            }
+          } else {
+            // Insert new stock record
+            const { data: newStockRow, error: insStockErr } = await supabase
+              .from("scz_stock")
+              .insert({
+                product_id: data.product_id,
+                variant_id: variantId,
+                location_id: stockItem.location_id,
+                qty: stockItem.qty,
+                min_qty: stockItem.min_qty,
+                location_label: stockItem.location_label,
+              })
+              .select()
+              .single();
+            if (insStockErr) throw new Error(insStockErr.message);
+
+            // Add movement for initial quantity if > 0
+            if (stockItem.qty > 0) {
+              const { error: moveErr } = await supabase.from("scz_stock_movements").insert({
+                product_id: data.product_id,
+                variant_id: variantId,
+                location_id: stockItem.location_id,
+                movement_type: "entrada",
+                quantity: stockItem.qty,
+                reason: "Saldo inicial via Painel Unificado de Estoque",
+                user_id: userId,
+              });
+              if (moveErr) throw new Error(moveErr.message);
+            }
+          }
+        }
+      }
+
+      return { ok: true };
+    } catch (error: any) {
+      console.error("Error in syncProductAndStockUnified:", error);
+      throw new Error(error?.message || "Failed to sync unified product stock and variations");
+    }
+  });
+
+const updateStockRecordFullSchema = z.object({
+  id: z.string().uuid(),
+  product_id: z.string().uuid().optional().nullable(),
+  product_name: z.string().optional().nullable(),
+  variant_id: z.string().uuid().optional().nullable(),
+  size: z.string().optional().nullable(),
+  color: z.string().optional().nullable(),
+  sku: z.string().optional().nullable(),
+  barcode: z.string().optional().nullable(),
+  location_label: z.string().optional().nullable(),
+  qty: z.number().int().min(0).optional().nullable(),
+  min_qty: z.number().int().min(0).optional().nullable(),
+});
+
+export const updateStockRecordFull = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((i: unknown) => updateStockRecordFullSchema.parse(i))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context as any;
+
+    // 1. Fetch current stock record first
+    const { data: currentStock, error: getErr } = await supabase
+      .from("scz_stock")
+      .select("*")
+      .eq("id", data.id)
+      .single();
+    if (getErr) throw new Error("Erro ao buscar saldo atual: " + getErr.message);
+
+    const productId = data.product_id || currentStock.product_id;
+    const variantId = data.variant_id || currentStock.variant_id;
+
+    // 2. Update Product Name if provided and not empty
+    if (data.product_name && data.product_name.trim().length > 0 && productId) {
+      const { error: prodErr } = await supabase
+        .from("scz_products")
+        .update({ name: data.product_name.trim() })
+        .eq("id", productId);
+      if (prodErr) throw new Error("Erro ao atualizar nome do produto: " + prodErr.message);
+    }
+
+    // 3. Update variant or product SKU details
+    if (variantId) {
+      const variantPayload: any = {};
+      if (data.size !== undefined) variantPayload.size = data.size || null;
+      if (data.color !== undefined) variantPayload.color = data.color || null;
+      if (data.sku !== undefined) variantPayload.sku = data.sku || null;
+      if (data.barcode !== undefined) variantPayload.barcode = data.barcode || null;
+
+      if (Object.keys(variantPayload).length > 0) {
+        const { error: varErr } = await supabase
+          .from("scz_product_variants")
+          .update(variantPayload)
+          .eq("id", variantId);
+        if (varErr) throw new Error("Erro ao atualizar variação: " + varErr.message);
+      }
+    } else if (productId) {
+      if (data.sku !== undefined) {
+        const { error: prodSkuErr } = await supabase
+          .from("scz_products")
+          .update({ sku: data.sku || null })
+          .eq("id", productId);
+        if (prodSkuErr) throw new Error("Erro ao atualizar SKU do produto: " + prodSkuErr.message);
+      }
+    }
+
+    // 4. Update stock quantities and location label
+    const targetQty = data.qty !== undefined && data.qty !== null ? data.qty : currentStock.qty;
+    const targetMinQty = data.min_qty !== undefined && data.min_qty !== null ? data.min_qty : currentStock.min_qty;
+    const targetLocationLabel = data.location_label !== undefined ? data.location_label : currentStock.location_label;
+
+    const delta = targetQty - currentStock.qty;
+    if (delta !== 0) {
+      const { error: moveErr } = await supabase.from("scz_stock_movements").insert({
+        product_id: productId,
+        variant_id: variantId || null,
+        location_id: currentStock.location_id,
+        movement_type: "ajuste",
+        quantity: delta,
+        reason: `Ajuste rápido via painel de estoque: ${currentStock.qty} → ${targetQty}`,
+        user_id: userId,
+      });
+      if (moveErr) throw new Error("Erro ao registrar movimento de estoque: " + moveErr.message);
+    }
+
+    const { error: updStockErr } = await supabase
+      .from("scz_stock")
+      .update({
+        qty: targetQty,
+        min_qty: targetMinQty,
+        location_label: targetLocationLabel || null,
+      })
+      .eq("id", data.id);
+    if (updStockErr) throw new Error("Erro ao atualizar saldo de estoque: " + updStockErr.message);
+
+    return { ok: true };
+  });
+
+
 
 

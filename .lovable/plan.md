@@ -1,76 +1,133 @@
-# Módulo Estoque → ERP Profissional
+# Refatoração do Painel Administrativo — Produtos × Estoque
 
-Transformar o módulo atual num ERP de moda com controle por SKU/variação, atributos configuráveis por categoria, geração automática de combinações, localização física detalhada, dashboard e histórico completo. A tela **Produtos** vira apenas catálogo (marketing); todo o inventário passa a viver em **Estoque**.
+**Regra de ouro:** o frontend da loja não muda. Toda alteração ocorre em `/admin/*` e nas server functions administrativas. A vitrine continua lendo `stock_qty` (agregado) via views/campos calculados, sem quebra.
 
-## Escopo funcional
+---
 
-### 1. Atributos configuráveis por categoria
-- Nova tela "Atributos por Categoria" (Sapatos, Bolsas, Cintos, Carteiras, Óculos, Bijuterias, Chaveiros, Bonés, Meias, Lenços, Acessórios genéricos).
-- Checkboxes definem quais atributos a categoria usa: `numeração`, `cor`, `tamanho` (P/M/G/Único), `material`, `modelo`, `coleção`.
-- Default por categoria (ex.: Sapato → numeração+cor; Bolsa → cor+tamanho+material; Cinto → cor+tamanho).
-- Categorias sem `tamanho` recebem automaticamente "Único".
+## 1. Banco de dados (migração única)
 
-### 2. Geração automática de variações
-- Botão **"Gerar Variações Automaticamente"** dentro do produto (aba Variações).
-- Usuário informa valores por atributo (ex.: cores [Preto, Nude], numerações [35–40]).
-- Sistema cria o produto cartesiano — cada combinação = 1 SKU independente com:
-  SKU, código de barras, quantidade, estoque mínimo, estoque reservado, localização física, depósito, peso, dimensões, custo, preço, status.
-- SKU auto-gerado (`<prefixo>-<cor>-<tam>`), editável. Código de barras EAN-13 auto opcional.
+### Novas tabelas
+- `scz_stock_locations` — depósito, loja física, showroom, CD. Campos: `name`, `slug`, `type`, `is_active`.
+- `scz_stock` — estoque por (produto, variação, local). Campos: `product_id`, `variant_id` (nullable), `location_id`, `qty`, `min_qty`, `location_label` (corredor/prateleira), `last_movement_at`. Único por (product_id, variant_id, location_id).
+- `scz_suppliers` — fornecedores: `name`, `document`, `email`, `phone`.
+- `scz_stock_entries` — cabeçalho de entrada: fornecedor, NF, data, usuário, observação.
+- `scz_brands` — marcas (se ainda não existir): `name`, `slug`, `logo_url`.
 
-### 3. Localização física estruturada
-- Cada linha de estoque ganha: `depósito` (já existe), `corredor`, `prateleira`, `nível`, `caixa` (todos texto livre curto).
-- Exibido como badge "Dep. Principal · B / 05 / 02 / C08".
+### Alterações
+- `scz_products`: adicionar `brand_id`, `subcategory_id`, `gender`, `material`, `weight_g`, `height_cm`, `width_cm`, `length_cm`, `is_exclusive`, `meta_title`, `meta_description`. **Manter** `stock_qty` e `stock_min` como colunas espelhadas (calculadas por trigger a partir de `scz_stock`) para não quebrar a vitrine.
+- `scz_product_variants`: adicionar `internal_code`, `material`, `finish`. **Remover** `stock_qty` da UI de cadastro (coluna continua no BD como espelho, populada pelo trigger).
+- `scz_stock_movements`: adicionar `location_id`, `location_to_id` (para transferências), `variant_id` (já existe?), `unit_cost_cents`, `entry_id` (FK opcional), `qty_before`, `qty_after`, `reason` (enum ampliado: venda, troca, perda, danificado, brinde, uso_interno, garantia, devolucao, entrada, ajuste, transferencia, inventario, outros).
 
-### 4. Nova tela de gestão de estoque
-Tabela principal (uma linha por variação) com:
-Foto · Produto · Categoria · Cor · Numeração/Tamanho · Material · SKU · Cód. Barras · Qtd · Mín · Reservado · Localização · Depósito · Status · Ações (Histórico, Editar, Salvar rápido).
+### Trigger
+Reescrever `scz_apply_stock_movement` para:
+1. Atualizar `scz_stock.qty` no `location_id` (e no `location_to_id` para transferência).
+2. Recalcular `scz_products.stock_qty` como SUM sobre `scz_stock` (mantém vitrine consistente).
+3. Gravar `qty_before`/`qty_after` no próprio movimento.
+4. Bloquear DELETE em `scz_stock_movements` (histórico imutável).
 
-Filtros: categoria, depósito, status (em estoque / baixo / zerado), busca por SKU/barras/nome.
-Ações em massa: alterar depósito, exportar CSV, imprimir etiquetas (fase 2 — placeholder).
+### GRANTs + RLS
+Padrão do projeto: `authenticated`/`service_role`, políticas `has_role('admin')` para escrita, leitura pública nula (estoque é dado interno).
 
-### 5. Movimentações
-Tipos: Entrada, Venda, Saída, Troca, Devolução, Ajuste Manual, Inventário, Transferência entre depósitos.
-Cada movimento registra: usuário, data/hora, quantidade, motivo, saldo antes/depois (já existe no trigger `scz_apply_stock_movement`). Adicionar Transferência de volta (foi removida antes; agora é requisito).
+---
 
-### 6. Dashboard do Estoque
-Cards: nº produtos cadastrados, nº SKUs, pares de sapato, bolsas, acessórios, sem estoque, estoque baixo, valor total (Σ qty × custo), últimas 10 movimentações.
+## 2. Server functions (novas + refatoradas)
 
-### 7. Simplificar tela Produtos
-Manter apenas: Nome, Categoria, Marca, Descrição curta/longa, Fotos, Vídeos, SEO/marketing, coleção, status.
-Remover dali: preço por variação, estoque, SKU, cor, tamanho, código de barras, dimensões físicas de variação, depósito. Tudo migra para o card "Variações & Estoque" que abre o módulo Estoque focado nesse produto.
+Todas em `src/lib/admin/*.functions.ts` com `requireAdmin`:
 
-## Mudanças de banco
+- `stock/locations.functions.ts` — CRUD locais.
+- `stock/suppliers.functions.ts` — CRUD fornecedores.
+- `stock/stock.functions.ts` — `listStock` (com filtros: categoria, marca, cor, tamanho, status, busca por nome/SKU/barras), `getStockByProduct`, `getDashboard` (indicadores + gráficos).
+- `stock/entries.functions.ts` — `createEntry` (cabeçalho + itens, cria movimentações `entrada`).
+- `stock/exits.functions.ts` — `createExit` (motivos enumerados).
+- `stock/adjustments.functions.ts` — `createAdjustment` (calcula delta a partir de contagem).
+- `stock/transfers.functions.ts` — `createTransfer` (gera 2 movimentações: saída origem + entrada destino).
+- `stock/inventory.functions.ts` — `startInventory`, `submitCount`, `applyInventory` (gera ajustes por divergência).
+- `stock/reports.functions.ts` — mais vendidos, parados, curva ABC, valor de estoque, exportações (retorna JSON; export PDF/Excel/CSV feito no cliente com jsPDF/xlsx).
+- `products.functions.ts` (refatorar): remover `stock_qty`/`stock_min` do schema de input; adicionar novos campos comerciais.
 
-Migration única:
+### Automatizações
+- Ao aprovar pedido (server fn `updateOrderStatus` para `paid`/`shipped`): gera movimentação `venda` por item, respeitando variação.
+- Ao cancelar: gera `devolucao`.
+- Já existe hook parcial em `orders.functions.ts` — expandir.
 
-1. `scz_category_attributes` — configuração por categoria:
-   `id, category_id (fk), uses_size bool, uses_numeration bool, uses_color bool, uses_material bool, uses_model bool, size_options text[], numeration_options text[]`.
-2. `scz_product_variants`: adicionar `cost_cents int`, `reserved_qty int default 0`, `width_cm/height_cm/depth_cm numeric`.
-3. `scz_stock`: adicionar `aisle text`, `shelf text`, `level text`, `bin text` (localização física detalhada; `location_label` já existe).
-4. Ajustar enum `movement_type` para garantir `transferencia`, `inventario`, `troca`, `devolucao`, `ajuste`, `entrada`, `saida`, `venda` (a maioria já existe).
-5. Seed dos atributos default por categoria existente.
-6. GRANTs + policies (padrão admin via `has_role`).
+---
 
-## Mudanças de código
+## 3. UI administrativa
 
-**Server functions** (`src/lib/admin/`):
-- `category-attributes.functions.ts` (novo) — get/set config por categoria.
-- `variants.functions.ts` — nova `generateVariants({ productId, attributes })` fazendo produto cartesiano + upsert.
-- `stock-erp.functions.ts` — adicionar `transferStock`, incluir campos de localização física em list/update; expandir dashboard.
-- `products.functions.ts` — remover campos de inventário do payload editável.
+### Sidebar
+Substituir item único "Estoque" por grupo **Estoque** com submenu:
+```
+Estoque
+├── Dashboard
+├── Produtos em Estoque
+├── Entrada
+├── Saída
+├── Ajustes
+├── Transferências
+├── Inventário
+├── Sem Estoque
+├── Crítico
+├── Histórico
+└── Relatórios
+```
 
-**UI** (`src/routes/` + `src/components/admin/`):
-- `admin.estoque.tsx` — reescrever tabela com colunas do requisito; filtros e busca; botão "Gerar variações" abre modal.
-- `admin/StockEditModal.tsx` — adicionar campos localização física (corredor/prateleira/nível/caixa), custo, reservado, dimensões; aba Histórico já existe; aba Transferência.
-- `admin/GenerateVariantsModal.tsx` (novo) — seletor de atributos com base em `scz_category_attributes` + preview das combinações.
-- `admin/ProductForm.tsx` — remover seções de estoque/SKU/variações inline; deixar link "Gerenciar variações no Estoque →".
-- `admin.categorias.index.tsx` — nova aba/modal "Atributos" por categoria.
-- Dashboard: expandir aba "Dashboard" já existente em `admin.estoque.tsx`.
+### Rotas novas (`src/routes/admin.estoque.*.tsx`)
+- `admin.estoque.index.tsx` — Dashboard com cards + gráficos (recharts já usado).
+- `admin.estoque.produtos.tsx` — tabela profissional (imagem, produto, categoria, marca, cor, tamanho, SKU, barras, qty, mínimo, localização, status badge).
+- `admin.estoque.entrada.tsx` — form multi-item.
+- `admin.estoque.saida.tsx` — form com select de motivo.
+- `admin.estoque.ajustes.tsx` — form contagem vs sistema.
+- `admin.estoque.transferencias.tsx` — origem → destino.
+- `admin.estoque.inventario.tsx` — sessão de contagem por categoria/leitor.
+- `admin.estoque.historico.tsx` — timeline completa, filtros, sem delete.
+- `admin.estoque.relatorios.tsx` — cards de relatórios + export.
+- `admin.estoque.locais.tsx` — CRUD locais físicos.
+- `admin.estoque.fornecedores.tsx` — CRUD fornecedores.
 
-## Fora de escopo desta entrega
-- Impressão de etiquetas de código de barras (placeholder).
-- Leitor de código de barras USB/câmera.
-- Exportação CSV avançada (fica um export simples).
-- App mobile de inventário.
+### `ProductForm.tsx` (refatoração)
+Reorganizar em abas:
+1. **Básico** — nome, categoria, subcategoria, marca, coleção, gênero, descrições, especs, material, peso, dimensões.
+2. **Mídias** — dnd-kit reorder (já existe), capa, principal, vídeo.
+3. **Venda** — preço, promo, destaque, lançamento, exclusivo, ativo.
+4. **SEO** — meta title, description, slug, tags.
+5. **Variações** — matriz (cor × tamanho × modelo/material/acabamento) → gera SKUs. **Sem** campo de quantidade.
 
-Confirma que posso avançar com essa proposta? Ao aprovar, executo a migration primeiro e depois todas as mudanças de código.
+Remover completamente da UI: `stock_qty`, `stock_min`, ajuste manual.
+
+### Padrão visual
+- shadcn `Card`, `Table`, `Badge`, `Sheet`/`Dialog` para modais, `Tabs`, filtros com `Select`+`Input`, paginação server-side, busca com debounce.
+- Gráficos com `recharts`.
+- Badges de status: verde (em estoque), amarelo (baixo), vermelho (sem), cinza (inativo).
+
+---
+
+## 4. Frontend da loja — zero mudança
+
+A vitrine consulta `stock_qty` em `scz_products` e `scz_product_variants`. O trigger mantém esses campos sincronizados via SUM de `scz_stock`. Nenhuma server fn pública é alterada.
+
+---
+
+## 5. Ordem de entrega (4 etapas atômicas)
+
+**Etapa 1 — Fundação (migração + server fns core):**
+migração + trigger reescrito + server fns de locations, stock, entries, exits, adjustments, transfers, história.
+
+**Etapa 2 — UI Estoque (módulo novo completo):**
+sidebar + todas as rotas `admin.estoque.*`, dashboard com gráficos, tabela profissional, forms de movimentação.
+
+**Etapa 3 — Refatoração de Produtos:**
+`ProductForm` reorganizado em 5 abas, novos campos comerciais, remoção da UI de estoque, migração de dados existentes para `scz_stock` (local "Depósito" default).
+
+**Etapa 4 — Automações + Relatórios:**
+hooks de pedido (aprovado/cancelado/devolvido), inventário, transferências, relatórios com export PDF/Excel/CSV.
+
+---
+
+## Perguntas antes de começar
+
+1. **Locais físicos iniciais:** posso criar `Depósito` (default), `Loja Física`, `Showroom`, `Centro de Distribuição` como seed? Ou você quer cadastrar manualmente depois?
+2. **Migração de dados:** o estoque atual (`scz_products.stock_qty`) deve ser migrado inteiramente para o local "Depósito"? (Recomendo sim.)
+3. **Marcas (`scz_brands`):** confirmar criação — hoje `brand` é texto livre em `scz_products`. Vou converter para FK opcional (mantendo o texto legado).
+4. **Export PDF/Excel:** posso adicionar `jspdf` + `xlsx` como deps para os relatórios?
+
+Confirme (ou responda as 4 perguntas) e eu começo pela **Etapa 1** já no próximo turno.

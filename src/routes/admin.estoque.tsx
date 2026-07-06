@@ -11,10 +11,14 @@ import {
   createStockEntry,
   createStockExit,
   createStockAdjustment,
+  createStockTransfer,
   listMovements,
   listProductsForSelect,
   listBrands,
   updateSingleStockRecord,
+  syncProductAndStockUnified,
+  getProductStock,
+  updateStockRecordFull,
 } from "@/lib/admin/stock-erp.functions";
 import { listCategories } from "@/lib/admin/products.functions";
 import { listVariants, syncProductVariants } from "@/lib/admin/variants.functions";
@@ -51,10 +55,13 @@ import {
   Loader2,
   Trash2,
   Warehouse,
-  Sparkles,
+  ChevronDown,
+  ChevronUp,
+  Database,
+  Edit2,
+  Check,
+  X,
 } from "lucide-react";
-import { StockEditModal } from "@/components/admin/StockEditModal";
-import { GenerateVariantsModal } from "@/components/admin/GenerateVariantsModal";
 import {
   AreaChart,
   Area,
@@ -182,12 +189,19 @@ function StockPage() {
     onError: (e: any) => toast.error(e?.message || "Erro ao registrar ajuste"),
   });
 
-  // Transferência de estoque removida a pedido — usar Entrada/Saída para movimentos entre locais.
+  const transferMut = useMutation({
+    mutationFn: useServerFn(createStockTransfer),
+    onSuccess: () => {
+      toast.success("Transferência de estoque realizada");
+      qc.invalidateQueries();
+      setOpenTransfer(false);
+      resetTransferForm();
+    },
+    onError: (e: any) => toast.error(e?.message || "Erro ao realizar transferência"),
+  });
 
-  const updateStockRecordFn = useServerFn(updateSingleStockRecord);
   const updateStockRecordMut = useMutation({
-    mutationFn: (args: { id: string; qty: number; min_qty: number; location_label: string }) =>
-      updateStockRecordFn({ data: args }),
+    mutationFn: useServerFn(updateSingleStockRecord),
     onSuccess: () => {
       toast.success("Saldo de estoque atualizado");
       qc.invalidateQueries();
@@ -201,10 +215,14 @@ function StockPage() {
     queryFn: () => fetchDashboard(),
   });
 
-  const { data: locations } = useQuery({
+  const { data: rawLocations } = useQuery({
     queryKey: ["admin", "stock-locations"],
     queryFn: () => fetchLocations(),
   });
+
+  const locations = useMemo(() => {
+    return (rawLocations ?? []).filter((l: any) => l.slug === "deposito" || l.is_default);
+  }, [rawLocations]);
 
   const { data: suppliers } = useQuery({
     queryKey: ["admin", "stock-suppliers"],
@@ -250,6 +268,51 @@ function StockPage() {
       }),
   });
 
+  // Group stock rows by product
+  const groupedProducts = useMemo(() => {
+    if (!stockData?.rows) return [];
+
+    const map = new Map<string, {
+      product: any;
+      totalQty: number;
+      totalMin: number;
+      hasLowStock: boolean;
+      variantsCount: number;
+      records: any[];
+    }>();
+
+    for (const r of stockData.rows) {
+      const prodId = r.product?.id;
+      if (!prodId) continue;
+
+      if (!map.has(prodId)) {
+        map.set(prodId, {
+          product: r.product,
+          totalQty: 0,
+          totalMin: 0,
+          hasLowStock: false,
+          variantsCount: 0,
+          records: [],
+        });
+      }
+
+      const group = map.get(prodId)!;
+      group.records.push(r);
+      group.totalQty += r.qty;
+      group.totalMin += r.min_qty;
+      if (r.qty === 0 || (r.min_qty > 0 && r.qty <= r.min_qty)) {
+        group.hasLowStock = true;
+      }
+    }
+
+    for (const group of map.values()) {
+      const uniqueVarIds = new Set(group.records.map((r) => r.variant?.id).filter(Boolean));
+      group.variantsCount = uniqueVarIds.size;
+    }
+
+    return Array.from(map.values());
+  }, [stockData]);
+
   // Filtros de histórico
   const [historyType, setHistoryType] = useState("all");
   const [historyPage, setHistoryPage] = useState(1);
@@ -270,10 +333,158 @@ function StockPage() {
   const [openEntry, setOpenEntry] = useState(false);
   const [openExit, setOpenExit] = useState(false);
   const [openAdjust, setOpenAdjust] = useState(false);
-  // Modal de edição profissional de estoque (substitui edição inline + transferência)
-  const [editModalProductId, setEditModalProductId] = useState<string | null>(null);
-  const [editModalProductName, setEditModalProductName] = useState<string>("");
-  const [genModalOpen, setGenModalOpen] = useState(false);
+  const [openTransfer, setOpenTransfer] = useState(false);
+
+  // Unified Stock Manager States
+  const [openUnified, setOpenUnified] = useState(false);
+  const [unifiedProductId, setUnifiedProductId] = useState("");
+  const [unifiedHasVariants, setUnifiedHasVariants] = useState(false);
+  const [unifiedVariantsList, setUnifiedVariantsList] = useState<any[]>([]);
+  const [loadingUnifiedData, setLoadingUnifiedData] = useState(false);
+  const [currentStocks, setCurrentStocks] = useState<any[]>([]);
+  const [currentVariants, setCurrentVariants] = useState<any[]>([]);
+  const [expandedProductIds, setExpandedProductIds] = useState<Record<string, boolean>>({});
+  const [gridSizesInput, setGridSizesInput] = useState("");
+  const [gridColorsInput, setGridColorsInput] = useState("");
+  const [showGridGenerator, setShowGridGenerator] = useState(false);
+
+  const toggleProductExpand = (id: string) => {
+    setExpandedProductIds(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
+
+  const syncProductAndStockUnifiedFn = useServerFn(syncProductAndStockUnified);
+  const fetchProductStock = useServerFn(getProductStock);
+
+  const unifiedSaveMut = useMutation({
+    mutationFn: syncProductAndStockUnifiedFn,
+    onSuccess: () => {
+      toast.success("Produto, variações e estoque atualizados com sucesso!");
+      qc.invalidateQueries();
+      setOpenUnified(false);
+    },
+    onError: (e: any) => {
+      toast.error(e?.message || "Erro ao salvar estoque e variações unificadas");
+    }
+  });
+
+  const currentStockRecords = useMemo(() => {
+    if (!unifiedProductId) return [];
+    const activeLocations = locations ?? [];
+    const activeProduct = (productsSelect ?? []).find(p => p.id === unifiedProductId);
+    if (!activeProduct) return [];
+
+    const records: any[] = [];
+    
+    if (unifiedHasVariants && currentVariants.length > 0) {
+      for (const v of currentVariants) {
+        for (const loc of activeLocations) {
+          const match = currentStocks.find((st: any) => st.variant_id === v.id && st.location_id === loc.id);
+          records.push({
+            id: match?.id || `${v.id}_${loc.id}`,
+            location: loc,
+            variant: v,
+            product: activeProduct,
+            qty: match ? match.qty : 0,
+            min_qty: match ? match.min_qty : 5,
+            location_label: match ? match.location_label : "",
+          });
+        }
+      }
+    } else {
+      for (const loc of activeLocations) {
+        const match = currentStocks.find((st: any) => !st.variant_id && st.location_id === loc.id);
+        records.push({
+          id: match?.id || `no-var_${loc.id}`,
+          location: loc,
+          variant: null,
+          product: activeProduct,
+          qty: match ? match.qty : 0,
+          min_qty: match ? match.min_qty : 5,
+          location_label: match ? match.location_label : "",
+        });
+      }
+    }
+
+    return records;
+  }, [unifiedProductId, unifiedHasVariants, currentStocks, currentVariants, locations, productsSelect]);
+
+  const handleOpenUnifiedEditor = async (p: any) => {
+    setUnifiedProductId(p.id);
+    setUnifiedHasVariants(p.has_variants ?? false);
+    setOpenUnified(true);
+    setLoadingUnifiedData(true);
+    setUnifiedVariantsList([]);
+    setCurrentStocks([]);
+    setCurrentVariants([]);
+    
+    try {
+      const [vars, stocks] = await Promise.all([
+        fetchVariants({ product_id: p.id }),
+        fetchProductStock({ product_id: p.id })
+      ]);
+
+      setCurrentStocks(stocks || []);
+      setCurrentVariants(vars || []);
+
+      const activeLocations = locations ?? [];
+
+      if (p.has_variants && vars.length > 0) {
+        const list = vars.map((v: any) => {
+          const stockItems = activeLocations.map((loc: any) => {
+            const match = stocks.find((st: any) => st.variant_id === v.id && st.location_id === loc.id);
+            return {
+              location_id: loc.id,
+              qty: match ? match.qty : 0,
+              min_qty: match ? match.min_qty : 5,
+              location_label: match ? match.location_label || "" : "",
+            };
+          });
+
+          return {
+            id: v.id,
+            size: v.size || "",
+            color: v.color || "",
+            sku: v.sku || "",
+            barcode: v.barcode || "",
+            price_cents: v.price_cents || p.price_cents || 0,
+            is_active: v.is_active ?? true,
+            stockItems,
+          };
+        });
+        setUnifiedVariantsList(list);
+      } else {
+        const stockItems = activeLocations.map((loc: any) => {
+          const match = stocks.find((st: any) => !st.variant_id && st.location_id === loc.id);
+          return {
+            location_id: loc.id,
+            qty: match ? match.qty : 0,
+            min_qty: match ? match.min_qty : 5,
+            location_label: match ? match.location_label || "" : "",
+          };
+        });
+
+        setUnifiedVariantsList([
+          {
+            id: null,
+            size: "",
+            color: "",
+            sku: p.sku || "",
+            barcode: p.barcode || "",
+            price_cents: p.price_cents || 0,
+            is_active: true,
+            stockItems,
+          }
+        ]);
+      }
+    } catch (err: any) {
+      toast.error("Erro ao carregar dados de variações: " + err.message);
+    } finally {
+      setLoadingUnifiedData(false);
+    }
+  };
 
   // Estados do Formulário de Entrada
   const [entrySupplier, setEntrySupplier] = useState("");
@@ -283,8 +494,8 @@ function StockPage() {
   const [entryNotes, setEntryNotes] = useState("");
   const [entryItems, setEntryItems] = useState<Array<{ product_id: string; variant_id: string; quantity: number; cost: string }>>([]);
 
-  const entryProducts: any[] = (productsSelect as any[]) ?? [];
-  const entrySelectedProductObj = (productId: string) => entryProducts.find((p: any) => p.id === productId);
+  const entryProducts = productsSelect ?? [];
+  const entrySelectedProductObj = (productId: string) => entryProducts.find((p) => p.id === productId);
 
   const resetEntryForm = () => {
     setEntrySupplier("");
@@ -312,7 +523,62 @@ function StockPage() {
     setExitNotes("");
   };
 
-  // (Edição inline removida — agora tudo pelo StockEditModal)
+  // Estados para edição inline de estoques
+  const [editingRowId, setEditingRowId] = useState<string | null>(null);
+  const [lastSavedRowId, setLastSavedRowId] = useState<string | null>(null);
+  const [editQty, setEditQty] = useState<number>(0);
+  const [editMinQty, setEditMinQty] = useState<number>(0);
+  const [editLocationLabel, setEditLocationLabel] = useState<string>("");
+  const [editProdName, setEditProdName] = useState<string>("");
+  const [editSize, setEditSize] = useState<string>("");
+  const [editColor, setEditColor] = useState<string>("");
+  const [editSku, setEditSku] = useState<string>("");
+  const [editBarcode, setEditBarcode] = useState<string>("");
+
+  const updateFullMut = useMutation({
+    mutationFn: useServerFn(updateStockRecordFull),
+    onSuccess: (res: any, variables: any) => {
+      toast.success("Saldo e detalhes do produto salvos com sucesso!");
+      const savedId = variables.id;
+      setLastSavedRowId(savedId);
+      setTimeout(() => {
+        setLastSavedRowId((prev) => (prev === savedId ? null : prev));
+      }, 5000);
+      setEditingRowId(null);
+      qc.invalidateQueries();
+    },
+    onError: (e: any) => {
+      toast.error(e?.message || "Erro ao salvar alterações");
+    }
+  });
+
+  const startEditRow = (row: any) => {
+    setEditingRowId(row.id);
+    setEditQty(row.qty);
+    setEditMinQty(row.min_qty);
+    setEditLocationLabel(row.location_label || "");
+    setEditProdName(row.product?.name || "");
+    setEditSize(row.variant?.size || "");
+    setEditColor(row.variant?.color || "");
+    setEditSku(row.variant?.sku || row.product?.sku || "");
+    setEditBarcode(row.variant?.barcode || "");
+  };
+
+  const saveEditRow = (row: any) => {
+    updateFullMut.mutate({
+      id: row.id,
+      product_id: row.product?.id,
+      product_name: editProdName,
+      variant_id: row.variant?.id || null,
+      size: row.variant ? editSize : null,
+      color: row.variant ? editColor : null,
+      sku: editSku,
+      barcode: row.variant ? editBarcode : null,
+      location_label: editLocationLabel,
+      qty: editQty,
+      min_qty: editMinQty,
+    });
+  };
 
   // Estados para Gerenciamento de Variações
   const [selectedVarProductId, setSelectedVarProductId] = useState<string>("");
@@ -322,7 +588,7 @@ function StockPage() {
   const fetchVariants = useServerFn(listVariants);
   const { data: dbVariants, isLoading: loadingDbVariants } = useQuery({
     queryKey: ["admin", "product-variants-edit", selectedVarProductId],
-    queryFn: () => fetchVariants({ data: { product_id: selectedVarProductId } }),
+    queryFn: () => fetchVariants({ product_id: selectedVarProductId }),
     enabled: !!selectedVarProductId,
   });
 
@@ -398,7 +664,22 @@ function StockPage() {
     setAdjustNotes("");
   };
 
-  // (Formulário de Transferência removido)
+  // Estados do Formulário de Transferência
+  const [transProductId, setTransProductId] = useState("");
+  const [transVariantId, setTransVariantId] = useState("");
+  const [transLocationFrom, setTransLocationFrom] = useState("");
+  const [transLocationTo, setTransLocationTo] = useState("");
+  const [transQty, setTransQty] = useState(1);
+  const [transNotes, setTransNotes] = useState("");
+
+  const resetTransferForm = () => {
+    setTransProductId("");
+    setTransVariantId("");
+    setTransLocationFrom("");
+    setTransLocationTo("");
+    setTransQty(1);
+    setTransNotes("");
+  };
 
   // Auxiliares de Formatação
   const formatBRL = (cents: number) => {
@@ -646,7 +927,7 @@ function StockPage() {
               </div>
 
               {/* Filtros */}
-              <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+              <div className={`grid grid-cols-1 ${locations.length > 1 ? "sm:grid-cols-5" : "sm:grid-cols-4"} gap-3`}>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
                   <Input
@@ -656,15 +937,17 @@ function StockPage() {
                     className="pl-9"
                   />
                 </div>
-                <Select value={stockLocation} onValueChange={(v) => { setStockLocation(v); setStockPage(1); }}>
-                  <SelectTrigger><SelectValue placeholder="Local de Estoque" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os locais</SelectItem>
-                    {(locations ?? []).map((l: any) => (
-                      <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {locations.length > 1 && (
+                  <Select value={stockLocation} onValueChange={(v) => { setStockLocation(v); setStockPage(1); }}>
+                    <SelectTrigger><SelectValue placeholder="Local de Estoque" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os locais</SelectItem>
+                      {(locations ?? []).map((l: any) => (
+                        <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
                 <Select value={stockCategory} onValueChange={(v) => { setStockCategory(v); setStockPage(1); }}>
                   <SelectTrigger><SelectValue placeholder="Categoria" /></SelectTrigger>
                   <SelectContent>
@@ -694,136 +977,414 @@ function StockPage() {
                 </Select>
               </div>
 
-              {/* Tabela de saldos */}
+              {/* Tabela de saldos agrupados por Produto */}
               {loadingStock ? (
                 <div className="flex items-center justify-center py-20">
                   <Loader2 className="h-6 w-6 animate-spin text-amber-600" />
                 </div>
-              ) : !stockData || stockData.rows.length === 0 ? (
-                <p className="text-center py-20 text-sm text-stone-500">Nenhum saldo de estoque encontrado.</p>
+              ) : !stockData || groupedProducts.length === 0 ? (
+                <p className="text-center py-20 text-sm text-stone-500">Nenhum produto em estoque encontrado.</p>
               ) : (
                 <>
-                  <div className="overflow-x-auto border border-stone-100 rounded-lg">
+                  <div className="overflow-x-auto border border-stone-100 rounded-lg bg-white">
                     <Table>
-                      <TableHeader>
+                      <TableHeader className="bg-stone-50">
                         <TableRow>
-                          <TableHead>Produto</TableHead>
-                          <TableHead>Variação</TableHead>
-                          <TableHead>Local de Estoque</TableHead>
-                          <TableHead>SKU / Cód. Barras</TableHead>
-                          <TableHead>Localização Física</TableHead>
-                          <TableHead>Quantidade</TableHead>
-                          <TableHead>Mínimo</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Ações</TableHead>
+                          <TableHead className="w-12"></TableHead>
+                          <TableHead className="font-semibold text-stone-700">Produto</TableHead>
+                          <TableHead className="font-semibold text-stone-700">Variações Cadastradas</TableHead>
+                          <TableHead className="font-semibold text-stone-700">Total em Estoque</TableHead>
+                          <TableHead className="font-semibold text-stone-700">Status Geral</TableHead>
+                          <TableHead className="text-right font-semibold text-stone-700 pr-4">Ações</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {stockData.rows.map((row: any) => {
+                        {groupedProducts.map((gp: any) => {
+                          const isExpanded = !!expandedProductIds[gp.product.id];
+                          const activeVarCount = gp.variantsCount;
+                          const hasLowStock = gp.hasLowStock;
+                          
                           return (
-                            <TableRow key={row.id}>
-                              <TableCell>
-                                <div className="font-semibold text-neutral-900">{row.product?.name}</div>
-                                <div className="text-[10px] text-stone-500">{row.product?.category?.name || "—"}</div>
-                              </TableCell>
-                              <TableCell>
-                                {row.variant ? (
-                                  <div className="text-xs">
-                                    {row.variant.size && <Badge variant="outline" className="mr-1">{row.variant.size}</Badge>}
-                                    {row.variant.color && <span className="text-stone-600 text-xs">{row.variant.color}</span>}
+                            <>
+                              {/* Master Row */}
+                              <TableRow 
+                                key={gp.product.id} 
+                                className={`hover:bg-stone-50/50 transition border-t border-stone-100 cursor-pointer ${isExpanded ? "bg-stone-50/30" : ""}`}
+                                onClick={() => toggleProductExpand(gp.product.id)}
+                              >
+                                <TableCell className="text-center pl-4 py-4">
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-stone-200/50 rounded-full" onClick={(e) => { e.stopPropagation(); toggleProductExpand(gp.product.id); }}>
+                                    {isExpanded ? (
+                                      <ChevronUp className="h-4 w-4 text-stone-600" />
+                                    ) : (
+                                      <ChevronDown className="h-4 w-4 text-stone-600" />
+                                    )}
+                                  </Button>
+                                </TableCell>
+                                <TableCell className="py-4">
+                                  <div className="flex items-center gap-3">
+                                    {gp.product.image_url ? (
+                                      <img 
+                                        src={gp.product.image_url} 
+                                        alt={gp.product.name} 
+                                        className="h-10 w-10 object-cover rounded-md border border-stone-200" 
+                                        referrerPolicy="no-referrer"
+                                      />
+                                    ) : (
+                                      <div className="h-10 w-10 rounded-md bg-stone-100 border border-stone-200 flex items-center justify-center text-stone-400 font-bold text-xs">
+                                        N/A
+                                      </div>
+                                    )}
+                                    <div>
+                                      <div className="font-bold text-stone-900 text-sm">{gp.product.name}</div>
+                                      <div className="text-[11px] text-stone-500 mt-0.5 flex gap-2">
+                                        <span>SKU: <strong className="font-mono">{gp.product.sku || "—"}</strong></span>
+                                        <span>•</span>
+                                        <span>Ref: {gp.product.reference_code || "—"}</span>
+                                      </div>
+                                    </div>
                                   </div>
-                                ) : (
-                                  <span className="text-xs text-stone-400">Único</span>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-1 text-xs font-medium text-stone-700">
-                                  <MapPin className="h-3 w-3 text-stone-400" />
-                                  {row.location?.name}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="text-xs font-mono">{row.variant?.sku || row.product?.sku || "—"}</div>
-                                <div className="text-[10px] text-stone-400">{row.variant?.barcode || "—"}</div>
-                              </TableCell>
-                              <TableCell>
-                                <span className="text-xs text-stone-600">{row.location_label || "—"}</span>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="h-6 w-6 rounded-full border-stone-200 text-stone-600 hover:bg-stone-100 disabled:opacity-30"
-                                    onClick={() => {
-                                      if (row.qty <= 0) return;
-                                      updateStockRecordMut.mutate({
-                                        id: row.id,
-                                        qty: Math.max(0, row.qty - 1),
-                                        min_qty: row.min_qty,
-                                        location_label: row.location_label,
-                                      });
-                                    }}
-                                    disabled={updateStockRecordMut.isPending || row.qty <= 0}
-                                    title="Diminuir 1 unidade"
-                                  >
-                                    -
-                                  </Button>
-                                  <span className="font-bold text-neutral-900 w-10 text-center font-mono text-sm">{row.qty}</span>
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="h-6 w-6 rounded-full border-stone-200 text-stone-600 hover:bg-stone-100"
-                                    onClick={() => {
-                                      updateStockRecordMut.mutate({
-                                        id: row.id,
-                                        qty: row.qty + 1,
-                                        min_qty: row.min_qty,
-                                        location_label: row.location_label,
-                                      });
-                                    }}
-                                    disabled={updateStockRecordMut.isPending}
-                                    title="Aumentar 1 unidade"
-                                  >
-                                    +
-                                  </Button>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <span className="text-stone-500 text-xs font-mono">{row.min_qty} un</span>
-                              </TableCell>
-                              <TableCell>{getStatusBadge(row.qty, row.min_qty)}</TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                      setEditModalProductId(row.product.id);
-                                      setEditModalProductName(row.product.name);
-                                    }}
-                                    className="h-8 text-xs text-stone-700 border-stone-200 hover:bg-stone-50 px-2 flex items-center gap-1"
-                                  >
-                                    Editar
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                      setAdjustProductId(row.product.id);
-                                      setAdjustVariantId(row.variant?.id ?? "");
-                                      setAdjustLocationId(row.location.id);
-                                      setAdjustCountedQty(row.qty);
-                                      setAdjustNotes("Ajuste rápido via listagem de estoque");
-                                      setOpenAdjust(true);
-                                    }}
-                                    className="h-8 text-xs text-amber-700 hover:text-amber-800 border-amber-200 hover:bg-amber-50 px-2 flex items-center gap-1"
-                                  >
-                                    Ajustar
-                                  </Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
+                                </TableCell>
+                                <TableCell className="py-4">
+                                  {gp.product.has_variants ? (
+                                    <Badge variant="outline" className="bg-blue-50/55 border-blue-200 text-blue-700 font-medium">
+                                      {activeVarCount} Variações de Grade
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="bg-stone-50 border-stone-200 text-stone-600 font-medium">
+                                      Variação Única (Sem Grade)
+                                    </Badge>
+                                  )}
+                                </TableCell>
+                                <TableCell className="py-4 font-mono font-bold text-stone-950 text-sm">
+                                  {gp.totalQty} unidades
+                                </TableCell>
+                                <TableCell className="py-4">
+                                  {gp.totalQty === 0 ? (
+                                    <Badge className="bg-rose-100 text-rose-800 border-rose-200 hover:bg-rose-100">
+                                      Indisponível (Sem Estoque)
+                                    </Badge>
+                                  ) : hasLowStock ? (
+                                    <Badge className="bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100">
+                                      Crítico (Abaixo do Mínimo)
+                                    </Badge>
+                                  ) : (
+                                    <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-100">
+                                      Estável (Adequado)
+                                    </Badge>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-right py-4 pr-4" onClick={(e) => e.stopPropagation()}>
+                                  <div className="flex justify-end gap-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => toggleProductExpand(gp.product.id)}
+                                      className="h-8 text-xs text-stone-700 border-stone-200 hover:bg-stone-50 font-semibold"
+                                    >
+                                      {isExpanded ? "Ocultar Saldos" : "Ver Saldos"}
+                                    </Button>
+                                    <Button
+                                      variant="default"
+                                      size="sm"
+                                      onClick={() => handleOpenUnifiedEditor(gp.product)}
+                                      className="h-8 text-xs bg-amber-600 hover:bg-amber-700 text-white font-semibold shadow-sm flex items-center gap-1.5"
+                                    >
+                                      <Package className="h-3.5 w-3.5" />
+                                      Gerenciar Variações & Estoque
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+
+                              {/* Expanded Row containing nested detailed balances */}
+                              {isExpanded && (
+                                <TableRow key={`${gp.product.id}-expanded`} className="bg-stone-50/40 hover:bg-stone-50/40">
+                                  <TableCell colSpan={6} className="p-4 border-t border-b border-stone-100">
+                                    <div className="pl-12 pr-4 space-y-3">
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex flex-col gap-1.5 w-full">
+                                          <div className="flex items-center justify-between">
+                                            <button
+                                              onClick={() => handleOpenUnifiedEditor(gp.product)}
+                                              className="text-xs font-bold uppercase tracking-wider text-stone-600 hover:text-amber-700 flex items-center gap-1.5 transition group cursor-pointer"
+                                            >
+                                              <Database className="h-4 w-4 text-amber-600 animate-pulse" />
+                                              <span>Saldos Físicos e Variações Atuais ({gp.records.length} registros)</span>
+                                              <Edit2 className="h-3.5 w-3.5 text-stone-400 group-hover:text-amber-600 transition" />
+                                              <span className="text-[10px] lowercase text-stone-400 font-normal group-hover:text-amber-600">(clique para editar tudo)</span>
+                                            </button>
+                                            <span className="text-[11px] text-stone-400 font-mono">ID: {gp.product.id}</span>
+                                          </div>
+
+                                          {/* INPUT DO NOME DO PRODUTO QUANDO EM EDIÇÃO INLINE */}
+                                          {editingRowId && gp.records.some((r: any) => r.id === editingRowId) ? (
+                                            <div className="mt-2 flex flex-col sm:flex-row gap-2 bg-amber-50 border border-amber-200/80 p-3 rounded-lg shadow-sm animate-fade-in items-center justify-between">
+                                              <div className="flex items-center gap-2 w-full">
+                                                <span className="text-xs font-bold text-amber-800 uppercase shrink-0">Produto:</span>
+                                                <Input
+                                                  value={editProdName}
+                                                  onChange={(e) => setEditProdName(e.target.value)}
+                                                  className="h-8 text-xs bg-white border-amber-300 focus-visible:ring-amber-500 font-semibold w-full"
+                                                  placeholder="Edite o nome comercial do produto"
+                                                />
+                                              </div>
+                                              <span className="text-[10px] text-stone-500 italic shrink-0">
+                                                *O nome editado se aplicará a todas as variações deste produto.
+                                              </span>
+                                            </div>
+                                          ) : null}
+                                        </div>
+                                      </div>
+                                      
+                                      <div className="border border-stone-200/60 rounded-lg overflow-hidden bg-white shadow-sm">
+                                        <Table>
+                                          <TableHeader className="bg-stone-50/70">
+                                            <TableRow>
+                                              <TableHead className="h-9 text-xs font-semibold text-stone-600">Local de Estoque</TableHead>
+                                              <TableHead className="h-9 text-xs font-semibold text-stone-600">Grade / Variação</TableHead>
+                                              <TableHead className="h-9 text-xs font-semibold text-stone-600">SKU</TableHead>
+                                              <TableHead className="h-9 text-xs font-semibold text-stone-600">Código de Barras</TableHead>
+                                              <TableHead className="h-9 text-xs font-semibold text-stone-600">Localização Física</TableHead>
+                                              <TableHead className="h-9 text-xs font-semibold text-stone-600">Qtd Atual</TableHead>
+                                              <TableHead className="h-9 text-xs font-semibold text-stone-600">Estoque Mínimo</TableHead>
+                                              <TableHead className="h-9 text-xs font-semibold text-stone-600">Status</TableHead>
+                                              <TableHead className="h-9 text-xs font-semibold text-stone-600 text-right pr-4">Ações</TableHead>
+                                            </TableRow>
+                                          </TableHeader>
+                                          <TableBody>
+                                            {gp.records.map((row: any) => {
+                                              const isEditingThisRow = editingRowId === row.id;
+
+                                              return (
+                                                <TableRow 
+                                                  key={row.id} 
+                                                  onClick={() => {
+                                                    if (!editingRowId) {
+                                                      handleOpenUnifiedEditor(gp.product);
+                                                    }
+                                                  }}
+                                                  className={`${
+                                                    isEditingThisRow 
+                                                      ? "bg-amber-50/20 hover:bg-amber-50/30 border-amber-200" 
+                                                      : "hover:bg-amber-50/45 border-t border-stone-100 cursor-pointer"
+                                                  } transition duration-150`}
+                                                  title={isEditingThisRow ? undefined : "Clique para gerenciar este produto"}
+                                                >
+                                                  {/* LOCAL DE ESTOQUE */}
+                                                  <TableCell className="py-2.5 text-xs font-medium text-stone-700 flex items-center gap-1">
+                                                    <MapPin className="h-3.5 w-3.5 text-stone-400" />
+                                                    {row.location?.name}
+                                                  </TableCell>
+
+                                                  {/* GRADE / VARIAÇÃO */}
+                                                  <TableCell className="py-2.5 text-xs font-semibold text-stone-900" onClick={(e) => { if (isEditingThisRow) e.stopPropagation(); }}>
+                                                    {isEditingThisRow ? (
+                                                      row.variant ? (
+                                                        <div className="flex gap-1.5 items-center">
+                                                          <div className="flex flex-col gap-0.5">
+                                                            <span className="text-[9px] text-stone-400 uppercase">Tam.</span>
+                                                            <Input 
+                                                              value={editSize} 
+                                                              onChange={(e) => setEditSize(e.target.value)} 
+                                                              className="h-7 w-12 text-[11px] p-1 text-center font-bold" 
+                                                              placeholder="T" 
+                                                            />
+                                                          </div>
+                                                          <div className="flex flex-col gap-0.5">
+                                                            <span className="text-[9px] text-stone-400 uppercase">Cor</span>
+                                                            <Input 
+                                                              value={editColor} 
+                                                              onChange={(e) => setEditColor(e.target.value)} 
+                                                              className="h-7 w-20 text-[11px] p-1 font-semibold" 
+                                                              placeholder="Cor" 
+                                                            />
+                                                          </div>
+                                                        </div>
+                                                      ) : (
+                                                        <span className="text-stone-400 font-normal italic">Único / Sem Grade</span>
+                                                      )
+                                                    ) : (
+                                                      row.variant ? (
+                                                        <span className="flex gap-1.5 items-center">
+                                                          {row.variant.size && (
+                                                            <span className="bg-stone-100 text-stone-800 text-[10px] px-1.5 py-0.5 rounded border border-stone-200/80">
+                                                              T: {row.variant.size}
+                                                            </span>
+                                                          )}
+                                                          {row.variant.color && (
+                                                            <span className="text-stone-600">{row.variant.color}</span>
+                                                          )}
+                                                          {row.variant.model && (
+                                                            <span className="text-stone-400 text-[10px]">({row.variant.model})</span>
+                                                          )}
+                                                        </span>
+                                                      ) : (
+                                                        <span className="text-stone-400">Único / Padrão</span>
+                                                      )
+                                                    )}
+                                                  </TableCell>
+
+                                                  {/* SKU */}
+                                                  <TableCell className="py-2.5 text-xs font-mono text-stone-600" onClick={(e) => { if (isEditingThisRow) e.stopPropagation(); }}>
+                                                    {isEditingThisRow ? (
+                                                      <div className="flex flex-col gap-0.5">
+                                                        <span className="text-[9px] text-stone-400 uppercase">SKU</span>
+                                                        <Input 
+                                                          value={editSku} 
+                                                          onChange={(e) => setEditSku(e.target.value)} 
+                                                          className="h-7 w-28 text-[11px] font-mono p-1" 
+                                                          placeholder="SKU" 
+                                                        />
+                                                      </div>
+                                                    ) : (
+                                                      row.variant?.sku || row.product?.sku || "—"
+                                                    )}
+                                                  </TableCell>
+
+                                                  {/* CÓDIGO DE BARRAS */}
+                                                  <TableCell className="py-2.5 text-xs font-mono text-stone-400" onClick={(e) => { if (isEditingThisRow) e.stopPropagation(); }}>
+                                                    {isEditingThisRow ? (
+                                                      row.variant ? (
+                                                        <div className="flex flex-col gap-0.5">
+                                                          <span className="text-[9px] text-stone-400 uppercase">Cód. Barras</span>
+                                                          <Input 
+                                                            value={editBarcode} 
+                                                            onChange={(e) => setEditBarcode(e.target.value)} 
+                                                            className="h-7 w-28 text-[11px] font-mono p-1" 
+                                                            placeholder="Código de Barras" 
+                                                          />
+                                                        </div>
+                                                      ) : (
+                                                        <span className="text-stone-400 font-normal italic">N/A</span>
+                                                      )
+                                                    ) : (
+                                                      row.variant?.barcode || "—"
+                                                    )}
+                                                  </TableCell>
+
+                                                  {/* LOCALIZAÇÃO FÍSICA */}
+                                                  <TableCell className="py-2.5 text-xs text-stone-600 font-mono" onClick={(e) => { if (isEditingThisRow) e.stopPropagation(); }}>
+                                                    {isEditingThisRow ? (
+                                                      <div className="flex flex-col gap-0.5">
+                                                        <span className="text-[9px] text-stone-400 uppercase">Gaveta/Prat.</span>
+                                                        <Input 
+                                                          value={editLocationLabel} 
+                                                          onChange={(e) => setEditLocationLabel(e.target.value)} 
+                                                          className="h-7 w-24 text-[11px] font-mono p-1" 
+                                                          placeholder="A1, B2..." 
+                                                        />
+                                                      </div>
+                                                    ) : (
+                                                      row.location_label || "—"
+                                                    )}
+                                                  </TableCell>
+
+                                                  {/* QUANTIDADE ATUAL */}
+                                                  <TableCell className="py-2.5 text-xs font-mono font-bold text-stone-900" onClick={(e) => { if (isEditingThisRow) e.stopPropagation(); }}>
+                                                    {isEditingThisRow ? (
+                                                      <div className="flex flex-col gap-0.5">
+                                                        <span className="text-[9px] text-amber-700 uppercase font-bold">Qtd Atual</span>
+                                                        <Input 
+                                                          type="number"
+                                                          min="0"
+                                                          value={editQty} 
+                                                          onChange={(e) => setEditQty(Math.max(0, parseInt(e.target.value) || 0))} 
+                                                          className="h-7 w-16 text-[11px] font-mono p-1 border-amber-300 font-bold text-amber-950" 
+                                                        />
+                                                      </div>
+                                                    ) : (
+                                                      row.qty + " un"
+                                                    )}
+                                                  </TableCell>
+
+                                                  {/* ESTOQUE MÍNIMO */}
+                                                  <TableCell className="py-2.5 text-xs font-mono text-stone-500" onClick={(e) => { if (isEditingThisRow) e.stopPropagation(); }}>
+                                                    {isEditingThisRow ? (
+                                                      <div className="flex flex-col gap-0.5">
+                                                        <span className="text-[9px] text-stone-400 uppercase">Mínimo</span>
+                                                        <Input 
+                                                          type="number"
+                                                          min="0"
+                                                          value={editMinQty} 
+                                                          onChange={(e) => setEditMinQty(Math.max(0, parseInt(e.target.value) || 0))} 
+                                                          className="h-7 w-16 text-[11px] font-mono p-1" 
+                                                        />
+                                                      </div>
+                                                    ) : (
+                                                      row.min_qty + " un"
+                                                    )}
+                                                  </TableCell>
+
+                                                  {/* STATUS */}
+                                                  <TableCell className="py-2.5 text-xs" onClick={(e) => { if (isEditingThisRow) e.stopPropagation(); }}>
+                                                    {isEditingThisRow 
+                                                      ? getStatusBadge(editQty, editMinQty) 
+                                                      : getStatusBadge(row.qty, row.min_qty)
+                                                    }
+                                                  </TableCell>
+
+                                                  {/* AÇÕES */}
+                                                  <TableCell className="py-2.5 text-right pr-4" onClick={(e) => e.stopPropagation()}>
+                                                    {isEditingThisRow ? (
+                                                      <div className="flex items-center justify-end gap-1.5">
+                                                        <Button
+                                                          variant="default"
+                                                          size="sm"
+                                                          onClick={() => saveEditRow(row)}
+                                                          disabled={updateFullMut.isPending}
+                                                          className="h-7 px-2 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center gap-1 shadow-sm"
+                                                          title="Confirmar alterações"
+                                                        >
+                                                          {updateFullMut.isPending ? (
+                                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                                          ) : (
+                                                            <Check className="h-3.5 w-3.5" />
+                                                          )}
+                                                          Salvar
+                                                        </Button>
+                                                        <Button
+                                                          variant="outline"
+                                                          size="sm"
+                                                          onClick={() => setEditingRowId(null)}
+                                                          className="h-7 px-2 text-[11px] text-stone-600 border-stone-200 hover:bg-stone-100 font-semibold flex items-center gap-1"
+                                                          title="Descartar alterações"
+                                                        >
+                                                          <X className="h-3.5 w-3.5 text-stone-400" />
+                                                          Sair
+                                                        </Button>
+                                                      </div>
+                                                    ) : (
+                                                      <div className="flex items-center justify-end gap-1.5">
+                                                        {lastSavedRowId === row.id && (
+                                                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full animate-pulse flex items-center gap-1 shadow-sm">
+                                                            <Check className="h-3 w-3 text-emerald-600" />
+                                                            Salvo!
+                                                          </span>
+                                                        )}
+                                                        <Button
+                                                          variant="ghost"
+                                                          size="sm"
+                                                          onClick={() => startEditRow(row)}
+                                                          className="h-7 px-2.5 text-[11px] text-amber-700 hover:text-amber-850 hover:bg-amber-100/60 font-bold flex items-center gap-1 ml-auto transition"
+                                                        >
+                                                          <Edit2 className="h-3 w-3" />
+                                                          Editar
+                                                        </Button>
+                                                      </div>
+                                                    )}
+                                                  </TableCell>
+                                                </TableRow>
+                                              );
+                                            })}
+                                          </TableBody>
+                                        </Table>
+                                      </div>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              )}
+                            </>
                           );
                         })}
                       </TableBody>
@@ -894,7 +1455,20 @@ function StockPage() {
               </CardContent>
             </Card>
 
-            {/* Card de Transferência removido a pedido — usar Entrada/Saída */}
+            {locations.length > 1 && (
+              <Card className="hover:border-amber-500 transition cursor-pointer" onClick={() => setOpenTransfer(true)}>
+                <CardHeader className="pb-2">
+                  <Warehouse className="h-8 w-8 text-blue-600 mb-2" />
+                  <CardTitle className="font-serif text-lg">Transferência de Local</CardTitle>
+                  <CardDescription>Movimentar produtos entre o depósito, showroom ou loja física</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button variant="ghost" className="p-0 text-amber-600 hover:text-amber-700 font-semibold text-xs uppercase tracking-wider">
+                    Realizar Transferência &rarr;
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* ======================================================== */}
@@ -1168,10 +1742,7 @@ function StockPage() {
                         <SelectItem value="venda">Venda</SelectItem>
                         <SelectItem value="troca">Troca</SelectItem>
                         <SelectItem value="perda">Perda</SelectItem>
-                        <SelectItem value="avaria">Avaria</SelectItem>
                         <SelectItem value="danificado">Produto Danificado</SelectItem>
-                        <SelectItem value="ajuste_negativo">Ajuste −</SelectItem>
-                        <SelectItem value="consumo_interno">Consumo Interno</SelectItem>
                         <SelectItem value="brinde">Brinde</SelectItem>
                         <SelectItem value="uso_interno">Uso Interno</SelectItem>
                         <SelectItem value="garantia">Acionamento de Garantia</SelectItem>
@@ -1329,7 +1900,118 @@ function StockPage() {
             </DialogContent>
           </Dialog>
 
-          {/* Transferência removida */}
+          {/* ======================================================== */}
+          {/* DIALOG DE TRANSFERÊNCIA */}
+          {/* ======================================================== */}
+          <Dialog open={openTransfer} onOpenChange={(open) => !open && setOpenTransfer(false)}>
+            <DialogContent className="max-w-md bg-white">
+              <DialogHeader>
+                <DialogTitle className="font-serif text-xl font-bold">Transferir Estoque entre Locais</DialogTitle>
+              </DialogHeader>
+
+              <div className="space-y-4 py-2">
+                <div>
+                  <Label className="text-xs">Produto</Label>
+                  <SearchableProductSelect
+                    products={entryProducts}
+                    value={transProductId}
+                    onChange={(id) => {
+                      setTransProductId(id);
+                      setTransVariantId("");
+                    }}
+                  />
+                </div>
+
+                {transProductId && entrySelectedProductObj(transProductId)?.has_variants && (
+                  <div>
+                    <Label className="text-xs">Variação</Label>
+                    <Select value={transVariantId} onValueChange={setTransVariantId}>
+                      <SelectTrigger><SelectValue placeholder="Selecione a variação" /></SelectTrigger>
+                      <SelectContent>
+                        {(entrySelectedProductObj(transProductId)?.scz_product_variants ?? []).map((v: any) => (
+                          <SelectItem key={v.id} value={v.id}>
+                            {v.size ? `Tamanho: ${v.size}` : ""} {v.color ? `(${v.color})` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-xs">Local de Origem</Label>
+                    <Select value={transLocationFrom} onValueChange={setTransLocationFrom}>
+                      <SelectTrigger><SelectValue placeholder="Origem" /></SelectTrigger>
+                      <SelectContent>
+                        {(locations ?? []).map((l: any) => (
+                          <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Local de Destino</Label>
+                    <Select value={transLocationTo} onValueChange={setTransLocationTo}>
+                      <SelectTrigger><SelectValue placeholder="Destino" /></SelectTrigger>
+                      <SelectContent>
+                        {(locations ?? []).map((l: any) => (
+                          <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-xs">Quantidade a Transferir</Label>
+                  <Input
+                    type="number"
+                    value={transQty}
+                    onChange={(e) => setTransQty(Math.max(1, Number(e.target.value)))}
+                    min={1}
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-xs">Observações</Label>
+                  <Textarea value={transNotes} onChange={(e) => setTransNotes(e.target.value)} placeholder="Detalhes sobre a transferência..." rows={2} />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 mt-4 pt-2 border-t border-stone-100">
+                <Button variant="outline" onClick={() => setOpenTransfer(false)} disabled={transferMut.isPending}>
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (!transProductId) return toast.error("Selecione o produto");
+                    if (entrySelectedProductObj(transProductId)?.has_variants && !transVariantId) {
+                      return toast.error("Selecione a variação");
+                    }
+                    if (!transLocationFrom) return toast.error("Selecione o local de origem");
+                    if (!transLocationTo) return toast.error("Selecione o local de destino");
+                    if (transLocationFrom === transLocationTo) return toast.error("Origem e destino devem ser diferentes");
+
+                    transferMut.mutate({
+                      data: {
+                        product_id: transProductId,
+                        variant_id: transVariantId || null,
+                        location_id: transLocationFrom,
+                        location_to_id: transLocationTo,
+                        quantity: transQty,
+                        notes: transNotes || null,
+                      },
+                    });
+                  }}
+                  disabled={transferMut.isPending}
+                  className="bg-amber-600 hover:bg-amber-700"
+                >
+                  {transferMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Transferir"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         {/* CADASTRO DE VARIAÇÕES */}
@@ -1381,14 +2063,6 @@ function StockPage() {
 
                     {hasVariantsState && (
                       <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          size="sm"
-                          className="bg-amber-600 hover:bg-amber-700 text-white"
-                          onClick={() => setGenModalOpen(true)}
-                        >
-                          <Sparkles className="h-4 w-4 mr-1" /> Gerar Variações Automaticamente
-                        </Button>
                         <Button
                           type="button"
                           size="sm"
@@ -1656,7 +2330,7 @@ function StockPage() {
                     <SelectItem value="venda">Venda</SelectItem>
                     <SelectItem value="devolucao">Devolução</SelectItem>
                     <SelectItem value="ajuste">Ajuste de estoque</SelectItem>
-                    <SelectItem value="devolucao_fornecedor">Devolução ao fornecedor</SelectItem>
+                    <SelectItem value="transferencia">Transferência</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1757,20 +2431,533 @@ function StockPage() {
         </TabsContent>
       </Tabs>
 
-      <StockEditModal
-        open={!!editModalProductId}
-        onOpenChange={(v) => { if (!v) setEditModalProductId(null); }}
-        productId={editModalProductId}
-        productName={editModalProductName}
-      />
+      {/* DIALOG UNIFICADO DE ESTOQUE E VARIAÇÕES */}
+      <Dialog open={openUnified} onOpenChange={setOpenUnified}>
+        <DialogContent className="max-w-6xl bg-white max-h-[95vh] overflow-y-auto">
+          <DialogHeader className="border-b pb-3 mb-4">
+            <DialogTitle className="text-xl font-bold font-serif text-stone-900 flex items-center gap-2">
+              <Warehouse className="h-5 w-5 text-amber-600" />
+              Painel Unificado de Estoque e Variações
+            </DialogTitle>
+          </DialogHeader>
 
-      <GenerateVariantsModal
-        open={genModalOpen}
-        onOpenChange={setGenModalOpen}
-        productId={selectedVarProductId || null}
-        productName={entrySelectedProductObj(selectedVarProductId)?.name}
-        categoryId={entrySelectedProductObj(selectedVarProductId)?.category_id ?? null}
-      />
+          {loadingUnifiedData ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-3">
+              <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
+              <p className="text-sm text-stone-500 font-medium">Carregando grade de variações e saldos físicos...</p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Product Header Card */}
+              <div className="bg-stone-50 p-4 border rounded-xl flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <Package className="h-10 w-10 text-stone-400 p-2 bg-white rounded-lg border" />
+                  <div>
+                    <h3 className="font-bold text-stone-900">
+                      {(productsSelect ?? []).find(p => p.id === unifiedProductId)?.name || "Produto"}
+                    </h3>
+                    <p className="text-xs text-stone-500 font-mono mt-0.5">ID: {unifiedProductId}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 border-l pl-4">
+                  <Label htmlFor="unified-has-variants" className="text-sm font-semibold text-stone-700 cursor-pointer">
+                    Este produto possui variações físicas (Grade de Cor / Tamanho)
+                  </Label>
+                  <input
+                    id="unified-has-variants"
+                    type="checkbox"
+                    checked={unifiedHasVariants}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setUnifiedHasVariants(checked);
+                      if (!checked) {
+                        // Consolidate into single default variation
+                        const activeLocations = locations ?? [];
+                        const stockItems = activeLocations.map((loc: any) => ({
+                          location_id: loc.id,
+                          qty: 0,
+                          min_qty: 5,
+                          location_label: "",
+                        }));
+                        setUnifiedVariantsList([
+                          {
+                            id: null,
+                            size: "",
+                            color: "",
+                            sku: "",
+                            barcode: "",
+                            price_cents: 0,
+                            is_active: true,
+                            stockItems,
+                          }
+                        ]);
+                      }
+                    }}
+                    className="h-4 w-4 text-amber-600 rounded border-stone-300 focus:ring-amber-500"
+                  />
+                </div>
+              </div>
+
+              {/* Saldos Físicos e Variações Atuais */}
+              <div className="border border-stone-200/80 rounded-xl overflow-hidden bg-stone-50/30 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-stone-600 flex items-center gap-1.5">
+                    <Database className="h-4 w-4 text-amber-600 animate-pulse" />
+                    Saldos Físicos e Variações Atuais (Sincronizado com o Banco)
+                  </h4>
+                  <span className="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-100">
+                    Sincronizado
+                  </span>
+                </div>
+
+                {currentStockRecords.length === 0 ? (
+                  <p className="text-xs text-stone-500 italic py-2">Sem registros de estoque persistidos para este produto.</p>
+                ) : (
+                  <div className="border border-stone-200/60 rounded-lg overflow-hidden bg-white shadow-sm max-h-[30vh] overflow-y-auto">
+                    <Table>
+                      <TableHeader className="bg-stone-50/75 sticky top-0 z-10">
+                        <TableRow>
+                          <TableHead className="h-8 text-xs font-semibold text-stone-600">Local de Estoque</TableHead>
+                          <TableHead className="h-8 text-xs font-semibold text-stone-600">Grade / Variação</TableHead>
+                          <TableHead className="h-8 text-xs font-semibold text-stone-600">SKU</TableHead>
+                          <TableHead className="h-8 text-xs font-semibold text-stone-600">Código de Barras</TableHead>
+                          <TableHead className="h-8 text-xs font-semibold text-stone-600">Localização Física</TableHead>
+                          <TableHead className="h-8 text-xs font-semibold text-stone-600">Qtd Atual</TableHead>
+                          <TableHead className="h-8 text-xs font-semibold text-stone-600">Estoque Mínimo</TableHead>
+                          <TableHead className="h-8 text-xs font-semibold text-stone-600">Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {currentStockRecords.map((row: any) => (
+                          <TableRow key={row.id} className="hover:bg-stone-50/40 border-t border-stone-100">
+                            <TableCell className="py-2 text-xs font-medium text-stone-700 flex items-center gap-1">
+                              <MapPin className="h-3.5 w-3.5 text-stone-400" />
+                              {row.location?.name || "Depósito"}
+                            </TableCell>
+                            <TableCell className="py-2 text-xs font-semibold text-stone-900">
+                              {row.variant ? (
+                                <span className="flex gap-1.5 items-center">
+                                  {row.variant.size && (
+                                    <span className="bg-stone-100 text-stone-800 text-[10px] px-1.5 py-0.5 rounded border border-stone-200/80">
+                                      T: {row.variant.size}
+                                    </span>
+                                  )}
+                                  {row.variant.color && (
+                                    <span className="text-stone-600">{row.variant.color}</span>
+                                  )}
+                                </span>
+                              ) : (
+                                <span className="text-stone-400">Único / Padrão</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="py-2 text-xs font-mono text-stone-600">
+                              {row.variant?.sku || row.product?.sku || "—"}
+                            </TableCell>
+                            <TableCell className="py-2 text-xs font-mono text-stone-400">
+                              {row.variant?.barcode || "—"}
+                            </TableCell>
+                            <TableCell className="py-2 text-xs text-stone-600 font-mono">
+                              {row.location_label || "—"}
+                            </TableCell>
+                            <TableCell className="py-2 text-xs font-mono font-bold text-stone-900">
+                              {row.qty} un
+                            </TableCell>
+                            <TableCell className="py-2 text-xs font-mono text-stone-500">
+                              {row.min_qty} un
+                            </TableCell>
+                            <TableCell className="py-2 text-xs">
+                              {getStatusBadge(row.qty, row.min_qty)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </div>
+
+              {/* Grid Generator Inline Tool */}
+              {unifiedHasVariants && (
+                <div className="border border-stone-200/80 rounded-xl overflow-hidden bg-white shadow-sm">
+                  <div className="bg-stone-50/70 px-4 py-3 border-b flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-stone-600">
+                      Ferramentas de Grade
+                    </span>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowGridGenerator(!showGridGenerator)}
+                        className="h-8 text-xs border-stone-200 hover:bg-stone-50 font-semibold"
+                      >
+                        {showGridGenerator ? "Fechar Gerador" : "Gerar Grade em Massa"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const activeLocations = locations ?? [];
+                          const stockItems = activeLocations.map((loc: any) => ({
+                            location_id: loc.id,
+                            qty: 0,
+                            min_qty: 5,
+                            location_label: "",
+                          }));
+
+                          setUnifiedVariantsList(prev => [
+                            ...prev,
+                            {
+                              id: null,
+                              size: "",
+                              color: "",
+                              sku: "",
+                              barcode: "",
+                              price_cents: 0,
+                              is_active: true,
+                              stockItems,
+                            }
+                          ]);
+                        }}
+                        className="h-8 text-xs text-stone-700 border-stone-200 hover:bg-stone-50 font-semibold flex items-center gap-1"
+                      >
+                        <Plus className="h-3 w-3" /> Adicionar Linha Manual
+                      </Button>
+                    </div>
+                  </div>
+
+                  {showGridGenerator && (
+                    <div className="p-4 bg-stone-50 border-b space-y-4 animate-in fade-in duration-200">
+                      <p className="text-xs text-stone-600 font-medium">
+                        Insira os atributos separados por vírgula (Ex: P, M, G, GG). O sistema criará as combinações automaticamente.
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-semibold text-stone-700">Tamanhos</Label>
+                          <Input
+                            placeholder="P, M, G, GG"
+                            value={gridSizesInput}
+                            onChange={(e) => setGridSizesInput(e.target.value)}
+                            className="bg-white h-9 text-xs"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-semibold text-stone-700">Cores</Label>
+                          <Input
+                            placeholder="Preto, Off White, Azul Marinho"
+                            value={gridColorsInput}
+                            onChange={(e) => setGridColorsInput(e.target.value)}
+                            className="bg-white h-9 text-xs"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowGridGenerator(false)}
+                          className="h-8 text-xs"
+                        >
+                          Cancelar
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            const sizes = gridSizesInput.split(",").map(x => x.trim()).filter(Boolean);
+                            const colors = gridColorsInput.split(",").map(x => x.trim()).filter(Boolean);
+
+                            if (sizes.length === 0 && colors.length === 0) {
+                              toast.error("Insira pelo menos um tamanho ou uma cor para gerar a grade.");
+                              return;
+                            }
+
+                            const newCombinations: any[] = [];
+                            const activeLocations = locations ?? [];
+
+                            const sizesLoop = sizes.length > 0 ? sizes : [""];
+                            const colorsLoop = colors.length > 0 ? colors : [""];
+
+                            for (const s of sizesLoop) {
+                              for (const c of colorsLoop) {
+                                const stockItems = activeLocations.map((loc: any) => ({
+                                  location_id: loc.id,
+                                  qty: 0,
+                                  min_qty: 5,
+                                  location_label: "",
+                                }));
+
+                                newCombinations.push({
+                                  id: null,
+                                  size: s,
+                                  color: c,
+                                  sku: "",
+                                  barcode: "",
+                                  price_cents: 0,
+                                  is_active: true,
+                                  stockItems,
+                                });
+                              }
+                            }
+
+                            setUnifiedVariantsList(prev => [...prev, ...newCombinations]);
+                            toast.success(`${newCombinations.length} variações geradas na grade!`);
+                            setShowGridGenerator(false);
+                            setGridSizesInput("");
+                            setGridColorsInput("");
+                          }}
+                          className="h-8 text-xs bg-amber-600 hover:bg-amber-700 text-white font-semibold"
+                        >
+                          Gerar Grade
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Variants and Stock Levels Form List */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-bold text-stone-800">
+                    {unifiedHasVariants ? "Itens da Grade (Variações)" : "Saldos Físicos de Estoque"}
+                  </h4>
+                  <span className="text-xs text-stone-500 font-medium font-mono">
+                    {unifiedVariantsList.length} variação(ões) ativa(s)
+                  </span>
+                </div>
+
+                <div className="border border-stone-100 rounded-xl overflow-hidden bg-white shadow-sm max-h-[50vh] overflow-y-auto">
+                  <Table>
+                    <TableHeader className="bg-stone-50 sticky top-0 z-10">
+                      <TableRow>
+                        {unifiedHasVariants && (
+                          <>
+                            <TableHead className="w-20 font-semibold text-xs text-stone-600">Tamanho</TableHead>
+                            <TableHead className="w-28 font-semibold text-xs text-stone-600">Cor</TableHead>
+                          </>
+                        )}
+                        <TableHead className="w-36 font-semibold text-xs text-stone-600">SKU</TableHead>
+                        <TableHead className="w-32 font-semibold text-xs text-stone-600">Código Barras (EAN)</TableHead>
+                        <TableHead className="w-28 font-semibold text-xs text-stone-600">Preço Venda (R$)</TableHead>
+                        <TableHead className="font-semibold text-xs text-stone-600">Estoques por Filial (Saldos & Mínimo)</TableHead>
+                        {unifiedHasVariants && (
+                          <TableHead className="w-12 text-center"></TableHead>
+                        )}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {unifiedVariantsList.map((v: any, idx: number) => (
+                        <TableRow key={idx} className="hover:bg-stone-50/20 border-t">
+                          {unifiedHasVariants && (
+                            <>
+                              <TableCell className="p-2">
+                                <Input
+                                  value={v.size}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setUnifiedVariantsList(prev => prev.map((x, j) => j === idx ? { ...x, size: val } : x));
+                                  }}
+                                  className="h-8 text-xs font-bold text-center bg-white"
+                                  placeholder="P, M, G"
+                                />
+                              </TableCell>
+                              <TableCell className="p-2">
+                                <Input
+                                  value={v.color}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setUnifiedVariantsList(prev => prev.map((x, j) => j === idx ? { ...x, color: val } : x));
+                                  }}
+                                  className="h-8 text-xs bg-white"
+                                  placeholder="Preto, Branco..."
+                                />
+                              </TableCell>
+                            </>
+                          )}
+                          <TableCell className="p-2">
+                            <Input
+                              value={v.sku}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setUnifiedVariantsList(prev => prev.map((x, j) => j === idx ? { ...x, sku: val } : x));
+                              }}
+                              className="h-8 text-xs font-mono font-medium bg-white"
+                              placeholder="SKU-PRODUTO"
+                            />
+                          </TableCell>
+                          <TableCell className="p-2">
+                            <Input
+                              value={v.barcode}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setUnifiedVariantsList(prev => prev.map((x, j) => j === idx ? { ...x, barcode: val } : x));
+                              }}
+                              className="h-8 text-xs font-mono bg-white"
+                              placeholder="Código de Barras"
+                            />
+                          </TableCell>
+                          <TableCell className="p-2">
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={v.price_cents ? (v.price_cents / 100).toFixed(2) : ""}
+                              onChange={(e) => {
+                                const val = e.target.value ? Math.round(parseFloat(e.target.value) * 100) : 0;
+                                setUnifiedVariantsList(prev => prev.map((x, j) => j === idx ? { ...x, price_cents: val } : x));
+                              }}
+                              className="h-8 text-xs font-bold bg-white"
+                              placeholder="0,00"
+                            />
+                          </TableCell>
+                          <TableCell className="p-2">
+                            <div className="flex flex-col gap-2.5 border-l-2 border-stone-200 pl-3 py-1 bg-stone-50/40 rounded-r-lg">
+                              {(locations ?? []).map((loc: any) => {
+                                const stockItem = v.stockItems.find((it: any) => it.location_id === loc.id) || {
+                                  location_id: loc.id,
+                                  qty: 0,
+                                  min_qty: 5,
+                                  location_label: "",
+                                };
+                                
+                                return (
+                                  <div key={loc.id} className="flex flex-wrap items-center gap-2 text-xs">
+                                    <span className="font-semibold text-stone-600 min-w-[120px] truncate" title={loc.name}>
+                                      {loc.name}
+                                    </span>
+                                    <div className="flex items-center gap-1.5">
+                                      <Label className="text-[10px] text-stone-400 font-medium">Qtd:</Label>
+                                      <Input
+                                        type="number"
+                                        value={stockItem.qty}
+                                        onChange={(e) => {
+                                          const val = Math.max(0, parseInt(e.target.value) || 0);
+                                          setUnifiedVariantsList(prev => prev.map((x, j) => {
+                                            if (j !== idx) return x;
+                                            const hasLoc = (x.stockItems ?? []).some((si: any) => si.location_id === loc.id);
+                                            const updatedStockItems = hasLoc
+                                              ? x.stockItems.map((si: any) => 
+                                                  si.location_id === loc.id ? { ...si, qty: val } : si
+                                                )
+                                              : [...(x.stockItems ?? []), { location_id: loc.id, qty: val, min_qty: 5, location_label: "" }];
+                                            return { ...x, stockItems: updatedStockItems };
+                                          }));
+                                        }}
+                                        className="h-7 w-16 text-center font-bold font-mono text-xs bg-white"
+                                      />
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                      <Label className="text-[10px] text-stone-400 font-medium">Mín:</Label>
+                                      <Input
+                                        type="number"
+                                        value={stockItem.min_qty}
+                                        onChange={(e) => {
+                                          const val = Math.max(0, parseInt(e.target.value) || 0);
+                                          setUnifiedVariantsList(prev => prev.map((x, j) => {
+                                            if (j !== idx) return x;
+                                            const hasLoc = (x.stockItems ?? []).some((si: any) => si.location_id === loc.id);
+                                            const updatedStockItems = hasLoc
+                                              ? x.stockItems.map((si: any) => 
+                                                  si.location_id === loc.id ? { ...si, min_qty: val } : si
+                                                )
+                                              : [...(x.stockItems ?? []), { location_id: loc.id, qty: 0, min_qty: val, location_label: "" }];
+                                            return { ...x, stockItems: updatedStockItems };
+                                          }));
+                                        }}
+                                        className="h-7 w-14 text-center font-mono text-stone-500 text-xs bg-white"
+                                      />
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                      <Label className="text-[10px] text-stone-400 font-medium">Endereço:</Label>
+                                      <Input
+                                        placeholder="Ex: Prateleira B"
+                                        value={stockItem.location_label || ""}
+                                        onChange={(e) => {
+                                          const val = e.target.value;
+                                          setUnifiedVariantsList(prev => prev.map((x, j) => {
+                                            if (j !== idx) return x;
+                                            const hasLoc = (x.stockItems ?? []).some((si: any) => si.location_id === loc.id);
+                                            const updatedStockItems = hasLoc
+                                              ? x.stockItems.map((si: any) => 
+                                                  si.location_id === loc.id ? { ...si, location_label: val } : si
+                                                )
+                                              : [...(x.stockItems ?? []), { location_id: loc.id, qty: 0, min_qty: 5, location_label: val }];
+                                            return { ...x, stockItems: updatedStockItems };
+                                          }));
+                                        }}
+                                        className="h-7 w-24 text-[11px] bg-white"
+                                      />
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </TableCell>
+                          {unifiedHasVariants && (
+                            <TableCell className="p-2 text-center">
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => setUnifiedVariantsList(prev => prev.filter((_, j) => j !== idx))}
+                                className="h-8 w-8 hover:bg-rose-50 text-rose-500 hover:text-rose-700 rounded-full"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3 border-t pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setOpenUnified(false)}
+                  className="h-10 text-xs text-stone-600 border-stone-200 font-semibold hover:bg-stone-50"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    if (unifiedHasVariants && unifiedVariantsList.length === 0) {
+                      return toast.error("Por favor, adicione pelo menos uma variação ou desmarque a opção de variações.");
+                    }
+                    if (unifiedHasVariants) {
+                      const emptyAttrs = unifiedVariantsList.some(v => !v.size.trim() && !v.color.trim());
+                      if (emptyAttrs) {
+                        return toast.error("Todas as variações de grade devem possuir um Tamanho ou uma Cor definidos.");
+                      }
+                    }
+
+                    unifiedSaveMut.mutate({
+                      product_id: unifiedProductId,
+                      has_variants: unifiedHasVariants,
+                      variants: unifiedVariantsList,
+                    });
+                  }}
+                  disabled={unifiedSaveMut.isPending}
+                  className="h-10 text-xs bg-amber-600 hover:bg-amber-700 text-white font-bold px-6 shadow"
+                >
+                  {unifiedSaveMut.isPending ? (
+                    <span className="flex items-center gap-1.5">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Salvando Grade...
+                    </span>
+                  ) : "Salvar Grade e Atualizar Estoque"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

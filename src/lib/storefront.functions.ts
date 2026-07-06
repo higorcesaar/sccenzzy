@@ -245,15 +245,15 @@ export const listPublicProducts = createServerFn({ method: "POST" })
       });
     } catch (err) {
       console.warn("Supabase não configurado ou falhou, retornando produtos do catálogo local:", err);
-      let filtered: any[] = [...(PRODUCTS as any[])];
+      let filtered = [...PRODUCTS];
       if (data.onlyOnSale) {
-        filtered = filtered.filter((p: any) => p.isOnSale || p.originalPrice);
+        filtered = filtered.filter(p => p.isOnSale || p.originalPrice);
       }
       if (data.onlyLaunch) {
-        filtered = filtered.filter((p: any) => p.isLaunch);
+        filtered = filtered.filter(p => p.isLaunch);
       }
       if (data.categorySlug) {
-        filtered = filtered.filter((p: any) => p.category === data.categorySlug || p.categorySlug === data.categorySlug);
+        filtered = filtered.filter(p => p.category === data.categorySlug || p.categorySlug === data.categorySlug);
       }
       if (data.search) {
         const s = data.search.toLowerCase();

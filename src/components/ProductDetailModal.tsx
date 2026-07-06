@@ -220,6 +220,21 @@ export default function ProductDetailModal({ isOpen, onClose, product, onAddToCa
               )}
             </div>
 
+            {/* Shipping benefits list */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-stone-100">
+              <div className="flex items-center gap-2 text-stone-500 text-[10px] uppercase font-bold tracking-wider">
+                <Truck className="h-4.5 w-4.5 text-gold-500" />
+                <span>Frete Grátis acima de R$300</span>
+              </div>
+              <div className="flex items-center gap-2 text-stone-500 text-[10px] uppercase font-bold tracking-wider">
+                <RefreshCw className="h-4.5 w-4.5 text-gold-500" />
+                <span>Troca Fácil Garantida</span>
+              </div>
+              <div className="flex items-center gap-2 text-stone-500 text-[10px] uppercase font-bold tracking-wider">
+                <ShieldCheck className="h-4.5 w-4.5 text-emerald-600" />
+                <span>Boutique de Alta Categoria</span>
+              </div>
+            </div>
           </div>
 
           {/* Action Row */}
