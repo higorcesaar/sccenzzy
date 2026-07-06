@@ -85,10 +85,10 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, subtotal, di
         if (cancelled) return;
         if (res.ok) {
           setFreteQuotes(res.quotes);
-          const firstValid = res.quotes.find((q) => !q.erro && q.preco > 0);
+          const firstValid = res.quotes.find((q) => q.preco > 0);
           if (firstValid) setSelectedFreteCodigo(firstValid.codigo);
         } else {
-          setFreteErro(res.error || 'Não foi possível calcular o frete.');
+          setFreteErro('Não foi possível calcular o frete.');
           setFreteQuotes([]);
         }
       })
