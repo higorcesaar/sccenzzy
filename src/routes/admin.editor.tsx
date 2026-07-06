@@ -7,6 +7,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { getCampaignVideo, updateCampaignVideo } from "@/lib/campaign.functions";
 import { Loader2, Upload, ShieldCheck, ImageIcon, Film, Save } from "lucide-react";
+import { resolveVideoEmbed } from "@/lib/video-embed";
 
 export const Route = createFileRoute("/admin/editor")({
   head: () => ({ meta: [{ title: "Admin · Editor de mídia | Scenzzy" }] }),
