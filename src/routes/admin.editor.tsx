@@ -286,14 +286,8 @@ function AdminEditorPage() {
 
                 {campaignForm.url ? (
                   <div className="rounded-2xl overflow-hidden border border-stone-200 bg-stone-50 aspect-video relative flex items-center justify-center">
-                    <video
-                      key={campaignForm.url}
-                      src={campaignForm.url}
-                      muted
-                      controls
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute top-2 left-2 bg-black/70 px-2 py-0.5 rounded text-[8px] uppercase font-bold tracking-wider text-white">
+                    <CampaignVideoPreview url={campaignForm.url} />
+                    <div className="absolute top-2 left-2 bg-black/70 px-2 py-0.5 rounded text-[8px] uppercase font-bold tracking-wider text-white z-10">
                       Pré-visualização do Vídeo
                     </div>
                   </div>
