@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { listPublicHeroSlides } from "../lib/hero-carousel.functions";
 import { getCampaignVideo } from "../lib/campaign.functions";
+import { resolveVideoEmbed } from "../lib/video-embed";
 
 export default function CampaignBanner() {
   const [isMuted, setIsMuted] = useState(true);
