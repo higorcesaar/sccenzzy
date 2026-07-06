@@ -3,6 +3,7 @@ import { Volume2, VolumeX, Play, Pause, Sparkles, HelpCircle } from 'lucide-reac
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { listPublicHeroSlides } from "../lib/hero-carousel.functions";
+import { getCampaignVideo } from "../lib/campaign.functions";
 
 export default function CampaignBanner() {
   const [isMuted, setIsMuted] = useState(true);
@@ -16,8 +17,19 @@ export default function CampaignBanner() {
     staleTime: 60_000,
   });
 
+  const fetchCampaignVideo = useServerFn(getCampaignVideo);
+  const { data: campaignData } = useQuery({
+    queryKey: ["campaign-video"],
+    queryFn: () => fetchCampaignVideo(),
+    staleTime: 60_000,
+  });
+
   const activeVideoSlide = slides?.find((s: any) => s.video_url);
-  const videoUrl = activeVideoSlide?.video_url || "https://assets.mixkit.co/videos/preview/mixkit-fashion-model-dancing-at-outdoor-fashion-shoot-40348-large.mp4";
+  const videoUrl = campaignData?.url || activeVideoSlide?.video_url || "https://assets.mixkit.co/videos/preview/mixkit-fashion-model-dancing-at-outdoor-fashion-shoot-40348-large.mp4";
+
+  const subtitle = campaignData?.subtitle || "COLEÇÃO EXCLUSIVA • SCENZZY ICONS";
+  const title = campaignData?.title || "Nova Coleção";
+  const description = campaignData?.description || "Sapatos elegantes e bolsas estruturadas com acabamento primoroso. Descubra lançamentos que combinam as principais tendências de moda com conforto absoluto para o seu dia a dia.";
 
   useEffect(() => {
     if (videoRef.current) {
@@ -58,15 +70,15 @@ export default function CampaignBanner() {
         {/* Banner Copy Area */}
         <div className="max-w-xl text-center lg:text-left space-y-6">
           <span className="text-stone-500 font-display tracking-[0.35em] text-xs font-semibold uppercase block hover:text-gold-500 transition-colors">
-            COLEÇÃO EXCLUSIVA • SCENZZY ICONS
+            {subtitle}
           </span>
           
           <h2 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-black leading-tight bg-gradient-to-r from-neutral-950 via-gold-500 to-gold-600 bg-clip-text text-transparent pb-2">
-            Nova Coleção
+            {title}
           </h2>
           
           <p className="text-sm sm:text-base text-stone-600 leading-relaxed font-sans font-light">
-            Sapatos elegantes e bolsas estruturadas com acabamento primoroso. Descubra lançamentos que combinam as principais tendências de moda com conforto absoluto para o seu dia a dia.
+            {description}
           </p>
 
           <div className="pt-4 flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start">

@@ -189,7 +189,7 @@ export default function CartDrawer({ isOpen, onClose, cartItems, onUpdateQuantit
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      placeholder="Insira seu cupom"
+                      placeholder="Ex: PRIMEIROSCENZZY"
                       value={couponInput}
                       onChange={(e) => setCouponInput(e.target.value)}
                       className="flex-1 bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-gold-500 uppercase tracking-widest"
@@ -221,6 +221,13 @@ export default function CartDrawer({ isOpen, onClose, cartItems, onUpdateQuantit
                     </span>
                   </div>
                 )}
+                {/* Cashback alert */}
+                <div className="flex justify-between text-xs text-gold-500 font-medium">
+                  <span>Cashback a receber após envio</span>
+                  <span className="font-mono">
+                    {cashbackEstimation.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  </span>
+                </div>
                 <div className="flex justify-between text-xs text-stone-500">
                   <span>Frete</span>
                   <span className="font-mono text-emerald-600 font-semibold uppercase tracking-widest text-[10px]">
