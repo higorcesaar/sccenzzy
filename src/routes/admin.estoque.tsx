@@ -359,7 +359,7 @@ function StockPage() {
   const fetchProductStock = useServerFn(getProductStock);
 
   const unifiedSaveMut = useMutation({
-    mutationFn: syncProductAndStockUnifiedFn,
+    mutationFn: (input: any) => syncProductAndStockUnifiedFn({ data: input }),
     onSuccess: () => {
       toast.success("Produto, variações e estoque atualizados com sucesso!");
       qc.invalidateQueries();
@@ -373,7 +373,7 @@ function StockPage() {
   const currentStockRecords = useMemo(() => {
     if (!unifiedProductId) return [];
     const activeLocations = locations ?? [];
-    const activeProduct = (productsSelect ?? []).find(p => p.id === unifiedProductId);
+    const activeProduct = (productsSelect ?? []).find((p: any) => p.id === unifiedProductId);
     if (!activeProduct) return [];
 
     const records: any[] = [];
@@ -422,8 +422,8 @@ function StockPage() {
     
     try {
       const [vars, stocks] = await Promise.all([
-        fetchVariants({ product_id: p.id }),
-        fetchProductStock({ product_id: p.id })
+        fetchVariants({ data: { product_id: p.id } }),
+        fetchProductStock({ data: { product_id: p.id } })
       ]);
 
       setCurrentStocks(stocks || []);
@@ -495,7 +495,7 @@ function StockPage() {
   const [entryItems, setEntryItems] = useState<Array<{ product_id: string; variant_id: string; quantity: number; cost: string }>>([]);
 
   const entryProducts = productsSelect ?? [];
-  const entrySelectedProductObj = (productId: string) => entryProducts.find((p) => p.id === productId);
+  const entrySelectedProductObj = (productId: string) => entryProducts.find((p: any) => p.id === productId);
 
   const resetEntryForm = () => {
     setEntrySupplier("");
@@ -535,8 +535,9 @@ function StockPage() {
   const [editSku, setEditSku] = useState<string>("");
   const [editBarcode, setEditBarcode] = useState<string>("");
 
+  const updateFullFn = useServerFn(updateStockRecordFull);
   const updateFullMut = useMutation({
-    mutationFn: useServerFn(updateStockRecordFull),
+    mutationFn: (input: any) => updateFullFn({ data: input }),
     onSuccess: (res: any, variables: any) => {
       toast.success("Saldo e detalhes do produto salvos com sucesso!");
       const savedId = variables.id;
@@ -588,7 +589,7 @@ function StockPage() {
   const fetchVariants = useServerFn(listVariants);
   const { data: dbVariants, isLoading: loadingDbVariants } = useQuery({
     queryKey: ["admin", "product-variants-edit", selectedVarProductId],
-    queryFn: () => fetchVariants({ product_id: selectedVarProductId }),
+    queryFn: () => fetchVariants({ data: { product_id: selectedVarProductId } }),
     enabled: !!selectedVarProductId,
   });
 
@@ -2454,7 +2455,7 @@ function StockPage() {
                   <Package className="h-10 w-10 text-stone-400 p-2 bg-white rounded-lg border" />
                   <div>
                     <h3 className="font-bold text-stone-900">
-                      {(productsSelect ?? []).find(p => p.id === unifiedProductId)?.name || "Produto"}
+                      {(productsSelect ?? []).find((p: any) => p.id === unifiedProductId)?.name || "Produto"}
                     </h3>
                     <p className="text-xs text-stone-500 font-mono mt-0.5">ID: {unifiedProductId}</p>
                   </div>

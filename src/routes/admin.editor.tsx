@@ -29,7 +29,8 @@ function AdminEditorPage() {
 
   const saveCampaignVideo = useServerFn(updateCampaignVideo);
   const campaignMutation = useMutation({
-    mutationFn: saveCampaignVideo,
+    mutationFn: (input: { url: string; title: string; subtitle: string; description: string }) =>
+      saveCampaignVideo({ data: input }),
     onSuccess: () => {
       addToast("Campanha Editorial atualizada com sucesso!", "info", "Sucesso");
       refetchCampaign();
