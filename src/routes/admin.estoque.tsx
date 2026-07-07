@@ -1100,15 +1100,12 @@ function StockPage() {
                                       <div className="flex items-center justify-between">
                                         <div className="flex flex-col gap-1.5 w-full">
                                           <div className="flex items-center justify-between">
-                                            <button
-                                              onClick={() => handleOpenUnifiedEditor(gp.product)}
-                                              className="text-xs font-bold uppercase tracking-wider text-stone-600 hover:text-amber-700 flex items-center gap-1.5 transition group cursor-pointer"
+                                            <div
+                                              className="text-xs font-bold uppercase tracking-wider text-stone-600 flex items-center gap-1.5"
                                             >
-                                              <Database className="h-4 w-4 text-amber-600 animate-pulse" />
+                                              <Database className="h-4 w-4 text-amber-600" />
                                               <span>Saldos Físicos e Variações Atuais ({gp.records.length} registros)</span>
-                                              <Edit2 className="h-3.5 w-3.5 text-stone-400 group-hover:text-amber-600 transition" />
-                                              <span className="text-[10px] lowercase text-stone-400 font-normal group-hover:text-amber-600">(clique para editar tudo)</span>
-                                            </button>
+                                            </div>
                                             <span className="text-[11px] text-stone-400 font-mono">ID: {gp.product.id}</span>
                                           </div>
 
