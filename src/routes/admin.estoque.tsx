@@ -718,12 +718,6 @@ function StockPage() {
           <TabsTrigger value="produtos" className="flex items-center gap-1.5">
             <Package className="h-4 w-4" /> Produtos em Estoque
           </TabsTrigger>
-          <TabsTrigger value="operacoes" className="flex items-center gap-1.5">
-            <Warehouse className="h-4 w-4" /> Operações
-          </TabsTrigger>
-          <TabsTrigger value="variacoes" className="flex items-center gap-1.5">
-            <Plus className="h-4 w-4 text-emerald-600" /> Cadastro de Variações
-          </TabsTrigger>
           <TabsTrigger value="historico" className="flex items-center gap-1.5">
             <History className="h-4 w-4" /> Histórico de Movimentações
           </TabsTrigger>
