@@ -718,12 +718,6 @@ function StockPage() {
           <TabsTrigger value="produtos" className="flex items-center gap-1.5">
             <Package className="h-4 w-4" /> Produtos em Estoque
           </TabsTrigger>
-          <TabsTrigger value="operacoes" className="flex items-center gap-1.5">
-            <Warehouse className="h-4 w-4" /> Operações
-          </TabsTrigger>
-          <TabsTrigger value="variacoes" className="flex items-center gap-1.5">
-            <Plus className="h-4 w-4 text-emerald-600" /> Cadastro de Variações
-          </TabsTrigger>
           <TabsTrigger value="historico" className="flex items-center gap-1.5">
             <History className="h-4 w-4" /> Histórico de Movimentações
           </TabsTrigger>
@@ -1106,15 +1100,12 @@ function StockPage() {
                                       <div className="flex items-center justify-between">
                                         <div className="flex flex-col gap-1.5 w-full">
                                           <div className="flex items-center justify-between">
-                                            <button
-                                              onClick={() => handleOpenUnifiedEditor(gp.product)}
-                                              className="text-xs font-bold uppercase tracking-wider text-stone-600 hover:text-amber-700 flex items-center gap-1.5 transition group cursor-pointer"
+                                            <div
+                                              className="text-xs font-bold uppercase tracking-wider text-stone-600 flex items-center gap-1.5"
                                             >
-                                              <Database className="h-4 w-4 text-amber-600 animate-pulse" />
+                                              <Database className="h-4 w-4 text-amber-600" />
                                               <span>Saldos Físicos e Variações Atuais ({gp.records.length} registros)</span>
-                                              <Edit2 className="h-3.5 w-3.5 text-stone-400 group-hover:text-amber-600 transition" />
-                                              <span className="text-[10px] lowercase text-stone-400 font-normal group-hover:text-amber-600">(clique para editar tudo)</span>
-                                            </button>
+                                            </div>
                                             <span className="text-[11px] text-stone-400 font-mono">ID: {gp.product.id}</span>
                                           </div>
 
@@ -1160,17 +1151,11 @@ function StockPage() {
                                               return (
                                                 <TableRow 
                                                   key={row.id} 
-                                                  onClick={() => {
-                                                    if (!editingRowId) {
-                                                      handleOpenUnifiedEditor(gp.product);
-                                                    }
-                                                  }}
                                                   className={`${
                                                     isEditingThisRow 
                                                       ? "bg-amber-50/20 hover:bg-amber-50/30 border-amber-200" 
-                                                      : "hover:bg-amber-50/45 border-t border-stone-100 cursor-pointer"
+                                                      : "hover:bg-stone-50/40 border-t border-stone-100"
                                                   } transition duration-150`}
-                                                  title={isEditingThisRow ? undefined : "Clique para gerenciar este produto"}
                                                 >
                                                   {/* LOCAL DE ESTOQUE */}
                                                   <TableCell className="py-2.5 text-xs font-medium text-stone-700 flex items-center gap-1">
