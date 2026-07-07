@@ -1151,17 +1151,11 @@ function StockPage() {
                                               return (
                                                 <TableRow 
                                                   key={row.id} 
-                                                  onClick={() => {
-                                                    if (!editingRowId) {
-                                                      handleOpenUnifiedEditor(gp.product);
-                                                    }
-                                                  }}
                                                   className={`${
                                                     isEditingThisRow 
                                                       ? "bg-amber-50/20 hover:bg-amber-50/30 border-amber-200" 
-                                                      : "hover:bg-amber-50/45 border-t border-stone-100 cursor-pointer"
+                                                      : "hover:bg-stone-50/40 border-t border-stone-100"
                                                   } transition duration-150`}
-                                                  title={isEditingThisRow ? undefined : "Clique para gerenciar este produto"}
                                                 >
                                                   {/* LOCAL DE ESTOQUE */}
                                                   <TableCell className="py-2.5 text-xs font-medium text-stone-700 flex items-center gap-1">
