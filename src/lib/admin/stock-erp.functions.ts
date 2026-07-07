@@ -1177,8 +1177,9 @@ export const updateStockRecordFull = createServerFn({ method: "POST" })
       .from("scz_stock")
       .select("*")
       .eq("id", data.id)
-      .single();
+      .maybeSingle();
     if (getErr) throw new Error("Erro ao buscar saldo atual: " + getErr.message);
+    if (!currentStock) throw new Error("Registro de estoque não encontrado");
 
     const productId = data.product_id || currentStock.product_id;
     const variantId = data.variant_id || currentStock.variant_id;
