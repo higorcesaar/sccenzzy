@@ -131,6 +131,7 @@ function AdminEditorPage() {
         data: { filename: file.name, contentType: file.type || "application/octet-stream", dataBase64 },
       });
       setUploaded((prev) => [{ url: res.publicUrl, key: res.key }, ...prev]);
+      refetchMedia();
       addToast("Upload concluído para o R2.", "info", "Mídia enviada");
     } catch (err: any) {
       addToast(err?.message || "Falha no upload.", "info", "Erro");
