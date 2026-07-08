@@ -56,6 +56,13 @@ function AdminEditorPage() {
   const [uploading, setUploading] = useState(false);
   const [uploaded, setUploaded] = useState<{ url: string; key: string }[]>([]);
 
+  const fetchMedia = useServerFn(listUploadedMedia);
+  const { data: mediaLibrary, refetch: refetchMedia } = useQuery({
+    queryKey: ["r2-media-library"],
+    queryFn: () => fetchMedia(),
+    enabled: role === "admin",
+  });
+
   const fetchCampaignVideo = useServerFn(getCampaignVideo);
   const { data: campaignVideo, refetch: refetchCampaign } = useQuery({
     queryKey: ["campaign-video-admin"],
