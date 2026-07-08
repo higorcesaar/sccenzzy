@@ -4,8 +4,14 @@ import { requireAdmin } from "@/lib/admin/admin-guard";
 
 export const getCampaignVideo = createServerFn({ method: "GET" })
   .handler(async () => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await supabaseAdmin
+    const url = process.env.SUPABASE_URL!;
+    const key = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY!;
+    if (!url || !key) return null;
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(url, key, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { data, error } = await supabase
       .from("scz_settings")
       .select("value")
       .eq("key", "campaign_video")
