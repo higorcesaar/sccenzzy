@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
-import { uploadProductMedia } from "@/lib/r2.functions";
+import { uploadProductMedia, listUploadedMedia } from "@/lib/r2.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { getCampaignVideo, updateCampaignVideo } from "@/lib/campaign.functions";
