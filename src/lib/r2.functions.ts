@@ -125,4 +125,49 @@ export const uploadProductMedia = createServerFn({ method: "POST" })
     return { publicUrl, key };
   });
 
+/**
+ * Lista os arquivos já enviados ao R2 (prefixo `uploads/`), para que o
+ * Editor de mídia mostre o histórico e não apenas os uploads da sessão.
+ */
+export const listUploadedMedia = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const { data: isAdmin } = await supabase.rpc("has_role", {
+      _user_id: userId,
+      _role: "admin",
+    });
+    if (!isAdmin) throw new Error("Forbidden");
+
+    const accountId = process.env.R2_ACCOUNT_ID!;
+    const accessKeyId = process.env.R2_ACCESS_KEY_ID!;
+    const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY!;
+    const bucket = process.env.R2_BUCKET_NAME!;
+
+    const { AwsClient } = await import("aws4fetch");
+    const aws = new AwsClient({ accessKeyId, secretAccessKey, service: "s3", region: "auto" });
+
+    const endpoint = `https://${accountId}.r2.cloudflarestorage.com/${bucket}/?list-type=2&prefix=uploads/&max-keys=1000`;
+    const res = await aws.fetch(endpoint, { method: "GET" });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => "");
+      throw new Error(`Falha ao listar R2 (${res.status}): ${txt.slice(0, 200)}`);
+    }
+    const xml = await res.text();
+    const items: { key: string; url: string; lastModified: string; size: number }[] = [];
+    const regex = /<Contents>([\s\S]*?)<\/Contents>/g;
+    let m: RegExpExecArray | null;
+    while ((m = regex.exec(xml))) {
+      const block = m[1];
+      const key = /<Key>([^<]+)<\/Key>/.exec(block)?.[1] ?? "";
+      const lastModified = /<LastModified>([^<]+)<\/LastModified>/.exec(block)?.[1] ?? "";
+      const size = Number(/<Size>([^<]+)<\/Size>/.exec(block)?.[1] ?? "0");
+      if (!key) continue;
+      items.push({ key, url: `/api/public/r2/${key}`, lastModified, size });
+    }
+    items.sort((a, b) => (a.lastModified < b.lastModified ? 1 : -1));
+    return items;
+  });
+
+
 
