@@ -25,8 +25,7 @@ export default function CampaignBanner() {
     staleTime: 60_000,
   });
 
-  const activeVideoSlide = slides?.find((s: any) => s.video_url);
-  const videoUrl = campaignData?.url || activeVideoSlide?.video_url || "https://assets.mixkit.co/videos/preview/mixkit-fashion-model-dancing-at-outdoor-fashion-shoot-40348-large.mp4";
+  const videoUrl = campaignData?.url || "";
 
   const subtitle = campaignData?.subtitle || "COLEÇÃO EXCLUSIVA • SCENZZY ICONS";
   const title = campaignData?.title || "Nova Coleção";
