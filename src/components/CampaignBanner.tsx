@@ -97,67 +97,52 @@ export default function CampaignBanner() {
           </div>
         </div>
 
-        {/* Video Frame - only renders when a campaign video URL is configured */}
-        {videoUrl && (
-          <div className="relative w-full max-w-md aspect-[3/4.5] rounded-3xl overflow-hidden border border-stone-200 shadow-xl bg-white group">
-            {(() => {
-              const resolved = resolveVideoEmbed(videoUrl);
-              if (resolved?.kind === "iframe") {
-                let src = resolved.src;
-                // Add loop/autoplay/mute params for YouTube embeds
-                const ytMatch = src.match(/youtube\.com\/embed\/([\w-]+)/);
-                if (ytMatch) {
-                  src = `${src}?autoplay=1&mute=1&loop=1&playlist=${ytMatch[1]}&controls=0&modestbranding=1&rel=0`;
-                } else if (/player\.vimeo\.com/.test(src)) {
-                  src = `${src}${src.includes("?") ? "&" : "?"}autoplay=1&muted=1&loop=1&background=1`;
-                }
-                return (
-                  <iframe
-                    key={src}
-                    src={src}
-                    className="w-full h-full"
-                    frameBorder={0}
-                    allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-                    allowFullScreen
-                  />
-                );
-              }
-              return (
-                <>
-                  <video
-                    ref={videoRef}
-                    src={resolved?.src || videoUrl}
-                    autoPlay
-                    loop
-                    muted={isMuted}
-                    playsInline
-                    className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
-                  />
-                  <div className="absolute bottom-5 right-5 flex gap-2">
-                    <button
-                      onClick={togglePlay}
-                      className="bg-white/80 hover:bg-white hover:scale-105 active:scale-95 text-neutral-900 p-3 rounded-full border border-stone-200 transition-all focus:outline-none shadow-md"
-                      aria-label={isPlaying ? 'Pausar' : 'Play'}
-                    >
-                      {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                    </button>
-                    <button
-                      onClick={toggleMute}
-                      className="bg-white/80 hover:bg-white hover:scale-105 active:scale-95 text-neutral-900 p-3 rounded-full border border-stone-200 transition-all focus:outline-none shadow-md"
-                      aria-label={isMuted ? 'Ativar Áudio' : 'Desativar Áudio'}
-                    >
-                      {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </>
-              );
-            })()}
-
-            <div className="absolute top-5 left-5 bg-white/80 border border-stone-200 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 text-neutral-900 text-[10px] uppercase font-bold tracking-widest shadow-sm z-10">
-              <Sparkles className="h-3 w-3 text-gold-500 animate-spin" /> Campanha Editorial
+        {/* Video Frame - reproduz apenas o arquivo de vídeo enviado no Editor de mídia.
+            URLs de redes sociais (Instagram/TikTok/YouTube) não são suportadas aqui
+            para evitar UI de terceiros e cliques que abrem outra página. */}
+        {videoUrl && (() => {
+          const resolved = resolveVideoEmbed(videoUrl);
+          const isNative =
+            !resolved || resolved.kind === "video" || /^\/(api|assets)\//.test(videoUrl) || /\.(mp4|webm|ogg|mov|m4v)(\?|$)/i.test(videoUrl);
+          if (!isNative) return null;
+          const src = resolved?.kind === "video" ? resolved.src : videoUrl;
+          return (
+            <div className="relative w-full max-w-md aspect-[3/4.5] rounded-3xl overflow-hidden border border-stone-200 shadow-xl bg-black group">
+              <video
+                ref={videoRef}
+                src={src}
+                autoPlay
+                loop
+                muted={isMuted}
+                playsInline
+                controls={false}
+                disablePictureInPicture
+                controlsList="nodownload noremoteplayback noplaybackrate"
+                onContextMenu={(e) => e.preventDefault()}
+                className="w-full h-full object-cover pointer-events-none"
+              />
+              <div className="absolute bottom-5 right-5 flex gap-2 z-10">
+                <button
+                  onClick={togglePlay}
+                  className="bg-white/80 hover:bg-white hover:scale-105 active:scale-95 text-neutral-900 p-3 rounded-full border border-stone-200 transition-all focus:outline-none shadow-md"
+                  aria-label={isPlaying ? 'Pausar' : 'Play'}
+                >
+                  {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                </button>
+                <button
+                  onClick={toggleMute}
+                  className="bg-white/80 hover:bg-white hover:scale-105 active:scale-95 text-neutral-900 p-3 rounded-full border border-stone-200 transition-all focus:outline-none shadow-md"
+                  aria-label={isMuted ? 'Ativar Áudio' : 'Desativar Áudio'}
+                >
+                  {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                </button>
+              </div>
+              <div className="absolute top-5 left-5 bg-white/80 border border-stone-200 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 text-neutral-900 text-[10px] uppercase font-bold tracking-widest shadow-sm z-10">
+                <Sparkles className="h-3 w-3 text-gold-500 animate-spin" /> Campanha Editorial
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
 
       </div>
