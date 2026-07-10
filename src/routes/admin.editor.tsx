@@ -24,6 +24,9 @@ function CampaignVideoPreview({ url }: { url: string }) {
       </div>
     );
   }
+  if (resolved.kind === "image") {
+    return <img src={resolved.src} alt="Prévia" className="w-full h-full object-cover" />;
+  }
   if (resolved.kind === "video") {
     return (
       <video
@@ -32,6 +35,7 @@ function CampaignVideoPreview({ url }: { url: string }) {
         muted
         controls
         playsInline
+        preload="metadata"
         className="w-full h-full object-cover"
       />
     );
