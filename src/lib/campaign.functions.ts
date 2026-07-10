@@ -35,6 +35,7 @@ export const updateCampaignVideo = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase: ctxSupabase, userId } = context as any;
+    console.info("[campaign] updateCampaignVideo", { userId, url: data.url });
     const { error } = await ctxSupabase
       .from("scz_settings")
       .upsert(
@@ -50,6 +51,10 @@ export const updateCampaignVideo = createServerFn({ method: "POST" })
         },
         { onConflict: "key" }
       );
-    if (error) throw new Error(error.message);
+    if (error) {
+      console.error("[campaign] updateCampaignVideo failed", error);
+      throw new Error(error.message);
+    }
+    console.info("[campaign] updateCampaignVideo saved");
     return { success: true };
   });
