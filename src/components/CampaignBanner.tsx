@@ -97,14 +97,38 @@ export default function CampaignBanner() {
           </div>
         </div>
 
-        {/* Video Frame - only renders when a campaign video URL is configured */}
+        {/* Media Frame - renders image, video or iframe based on the configured URL */}
         {videoUrl && (
           <div className="relative w-full max-w-md aspect-[3/4.5] rounded-3xl overflow-hidden border border-stone-200 shadow-xl bg-white group">
             {(() => {
               const resolved = resolveVideoEmbed(videoUrl);
-              if (resolved?.kind === "iframe") {
+              if (typeof console !== "undefined") {
+                console.info("[CampaignBanner] media resolved", { videoUrl, resolved });
+              }
+
+              if (!resolved) {
+                return (
+                  <div className="w-full h-full flex items-center justify-center text-stone-400 text-xs p-6 text-center">
+                    URL de mídia inválida
+                  </div>
+                );
+              }
+
+              if (resolved.kind === "image") {
+                return (
+                  <img
+                    src={resolved.src}
+                    alt={title}
+                    className="w-full h-full object-cover"
+                    onError={(e) =>
+                      console.error("[CampaignBanner] image failed to load", resolved.src, e)
+                    }
+                  />
+                );
+              }
+
+              if (resolved.kind === "iframe") {
                 let src = resolved.src;
-                // Add loop/autoplay/mute params for YouTube embeds
                 const ytMatch = src.match(/youtube\.com\/embed\/([\w-]+)/);
                 if (ytMatch) {
                   src = `${src}?autoplay=1&mute=1&loop=1&playlist=${ytMatch[1]}&controls=0&modestbranding=1&rel=0`;
@@ -122,29 +146,35 @@ export default function CampaignBanner() {
                   />
                 );
               }
+
+              // kind === "video"
               return (
                 <>
                   <video
                     ref={videoRef}
-                    src={resolved?.src || videoUrl}
+                    src={resolved.src}
                     autoPlay
                     loop
                     muted={isMuted}
                     playsInline
+                    preload="metadata"
                     className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
+                    onError={(e) =>
+                      console.error("[CampaignBanner] video failed to load", resolved.src, e)
+                    }
                   />
                   <div className="absolute bottom-5 right-5 flex gap-2">
                     <button
                       onClick={togglePlay}
                       className="bg-white/80 hover:bg-white hover:scale-105 active:scale-95 text-neutral-900 p-3 rounded-full border border-stone-200 transition-all focus:outline-none shadow-md"
-                      aria-label={isPlaying ? 'Pausar' : 'Play'}
+                      aria-label={isPlaying ? "Pausar" : "Play"}
                     >
                       {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                     </button>
                     <button
                       onClick={toggleMute}
                       className="bg-white/80 hover:bg-white hover:scale-105 active:scale-95 text-neutral-900 p-3 rounded-full border border-stone-200 transition-all focus:outline-none shadow-md"
-                      aria-label={isMuted ? 'Ativar Áudio' : 'Desativar Áudio'}
+                      aria-label={isMuted ? "Ativar Áudio" : "Desativar Áudio"}
                     >
                       {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
                     </button>
