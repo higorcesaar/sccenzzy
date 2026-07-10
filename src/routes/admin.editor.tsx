@@ -280,19 +280,23 @@ function AdminEditorPage() {
                         <ImageIcon className="h-3 w-3 flex-shrink-0" /> {it.key.split("/").pop()}
                       </div>
                     </a>
-                    {isVideo && (
-                      <div className="absolute inset-x-0 bottom-0 bg-neutral-900/90 p-2 transform translate-y-full group-hover:translate-y-0 transition-transform flex justify-center">
-                        <button
-                          onClick={() => {
-                            setCampaignForm((prev) => ({ ...prev, url: it.url }));
-                            addToast("Vídeo selecionado para a Campanha Editorial!", "info", "Vídeo Selecionado");
-                          }}
-                          className="w-full text-white bg-gold-600 hover:bg-gold-500 text-[9px] uppercase tracking-widest font-bold py-1 px-2 rounded-lg flex items-center justify-center gap-1"
-                        >
-                          <Film className="h-2.5 w-2.5" /> Usar na Campanha
-                        </button>
-                      </div>
-                    )}
+                    <div className="absolute inset-x-0 bottom-0 bg-neutral-900/90 p-2 transform translate-y-full group-hover:translate-y-0 transition-transform flex justify-center">
+                      <button
+                        onClick={() => {
+                          setCampaignForm((prev) => ({ ...prev, url: it.url }));
+                          addToast(
+                            isVideo
+                              ? "Vídeo selecionado para a Campanha Editorial!"
+                              : "Imagem selecionada para a Campanha Editorial!",
+                            "info",
+                            "Mídia Selecionada"
+                          );
+                        }}
+                        className="w-full text-white bg-gold-600 hover:bg-gold-500 text-[9px] uppercase tracking-widest font-bold py-1 px-2 rounded-lg flex items-center justify-center gap-1"
+                      >
+                        <Film className="h-2.5 w-2.5" /> Usar na Campanha
+                      </button>
+                    </div>
                   </div>
                 );
               })}
