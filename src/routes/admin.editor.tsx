@@ -343,3 +343,177 @@ function AdminEditorPage() {
     </div>
   );
 }
+
+const VIDEO_RE = /\.(mp4|mov|webm|m4v|ogv)(\?|#|$)/i;
+
+function formatBytes(n: number) {
+  if (!n) return "—";
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / 1024 / 1024).toFixed(2)} MB`;
+}
+
+function formatDate(iso: string) {
+  if (!iso) return "";
+  try { return new Date(iso).toLocaleDateString("pt-BR"); } catch { return iso; }
+}
+
+function VideoDurationBadge({ src }: { src: string }) {
+  const [dur, setDur] = useState<string>("");
+  return (
+    <>
+      <video
+        src={src}
+        muted
+        preload="metadata"
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+        onLoadedMetadata={(e) => {
+          const d = (e.currentTarget as HTMLVideoElement).duration;
+          if (isFinite(d)) {
+            const m = Math.floor(d / 60);
+            const s = Math.floor(d % 60).toString().padStart(2, "0");
+            setDur(`${m}:${s}`);
+          }
+        }}
+      />
+      {dur && (
+        <span className="absolute bottom-1 right-1 bg-black/70 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
+          {dur}
+        </span>
+      )}
+    </>
+  );
+}
+
+type GalleryItem = { key: string; url: string; lastModified?: string; size?: number };
+
+function VideoGallery({
+  uploaded,
+  library,
+  currentCampaignUrl,
+  onSelect,
+  onDeleted,
+}: {
+  uploaded: { key: string; url: string }[];
+  library: GalleryItem[];
+  currentCampaignUrl: string;
+  onSelect: (url: string) => void;
+  onDeleted: (key: string) => void;
+}) {
+  const { addToast } = useToast();
+  const deleteFn = useServerFn(deleteUploadedMedia);
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  // Une sessão + biblioteca, sem duplicatas, mantendo só vídeos
+  const map = new Map<string, GalleryItem>();
+  for (const u of uploaded) map.set(u.key, { key: u.key, url: u.url });
+  for (const l of library) if (!map.has(l.key)) map.set(l.key, l);
+  const items = [...map.values()].filter((it) => VIDEO_RE.test(it.key));
+
+  async function handleDelete(item: GalleryItem) {
+    if (!confirm(`Excluir "${item.key.split("/").pop()}" definitivamente do Cloudflare R2?`)) return;
+    setBusyKey(item.key);
+    try {
+      let res = await deleteFn({ data: { key: item.key } });
+      if (!res.deleted && res.inUse) {
+        if (!confirm("Este vídeo está em uso na Campanha Editorial. Deseja excluir mesmo assim? A campanha ficará sem vídeo.")) {
+          setBusyKey(null);
+          return;
+        }
+        res = await deleteFn({ data: { key: item.key, force: true } });
+      }
+      if (res.deleted) {
+        addToast("Vídeo removido do R2.", "info", "Excluído");
+        onDeleted(item.key);
+      }
+    } catch (err: any) {
+      addToast(err?.message || "Falha ao excluir.", "info", "Erro");
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="rounded-2xl border-2 border-dashed border-stone-200 p-8 text-center text-stone-400 text-[11px] uppercase tracking-widest font-bold">
+        Nenhum vídeo enviado ainda
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <h2 className="font-display uppercase tracking-widest text-xs font-bold text-neutral-900">
+        Biblioteca de vídeos ({items.length})
+      </h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {items.map((it) => {
+          const inUse = currentCampaignUrl === it.url;
+          const name = it.key.split("/").pop() || it.key;
+          return (
+            <div
+              key={it.key}
+              className={`bg-white rounded-2xl border overflow-hidden transition ${
+                inUse ? "border-gold-500 ring-2 ring-gold-200" : "border-stone-200 hover:border-gold-300"
+              }`}
+            >
+              <div className="aspect-video bg-black relative">
+                <VideoDurationBadge src={it.url} />
+                {inUse && (
+                  <span className="absolute top-1 left-1 bg-gold-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider flex items-center gap-1">
+                    <Check className="h-2.5 w-2.5" /> Em uso
+                  </span>
+                )}
+              </div>
+              <div className="p-3 space-y-2">
+                <div className="text-[11px] font-semibold text-neutral-900 truncate" title={name}>{name}</div>
+                <div className="text-[10px] text-stone-500 flex justify-between">
+                  <span>{formatDate(it.lastModified || "")}</span>
+                  <span>{formatBytes(it.size || 0)}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5 pt-1">
+                  <button
+                    onClick={() => onSelect(it.url)}
+                    className="text-[9px] uppercase tracking-widest font-bold py-1.5 rounded-lg bg-gold-600 hover:bg-gold-500 text-white flex items-center justify-center gap-1"
+                  >
+                    <Film className="h-2.5 w-2.5" /> Usar
+                  </button>
+                  <button
+                    onClick={() => setPreviewUrl(it.url)}
+                    className="text-[9px] uppercase tracking-widest font-bold py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-neutral-900 flex items-center justify-center gap-1"
+                  >
+                    <Eye className="h-2.5 w-2.5" /> Ver
+                  </button>
+                  <button
+                    onClick={() => handleDelete(it)}
+                    disabled={busyKey === it.key}
+                    className="text-[9px] uppercase tracking-widest font-bold py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 flex items-center justify-center gap-1 disabled:opacity-50"
+                  >
+                    {busyKey === it.key ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Trash2 className="h-2.5 w-2.5" />} Excluir
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {previewUrl && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-6"
+          onClick={() => setPreviewUrl(null)}
+        >
+          <video
+            src={previewUrl}
+            controls
+            autoPlay
+            className="max-w-4xl max-h-[80vh] rounded-xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
