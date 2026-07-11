@@ -2,13 +2,12 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
-import { uploadProductMedia, listUploadedMedia, deleteUploadedMedia } from "@/lib/r2.functions";
+import { uploadProductMedia, listUploadedMedia } from "@/lib/r2.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { getCampaignVideo, updateCampaignVideo } from "@/lib/campaign.functions";
-import { Loader2, Upload, ShieldCheck, Film, Save, Trash2, Eye, Check } from "lucide-react";
+import { Loader2, Upload, ShieldCheck, ImageIcon, Film, Save } from "lucide-react";
 import { resolveVideoEmbed } from "@/lib/video-embed";
-
 
 export const Route = createFileRoute("/admin/editor")({
   head: () => ({ meta: [{ title: "Admin · Editor de mídia | Scenzzy" }] }),
@@ -183,7 +182,7 @@ function AdminEditorPage() {
         <label className={`block rounded-3xl border-2 border-dashed p-10 text-center transition-all cursor-pointer ${
           uploading ? "border-gold-300 bg-gold-50/50" : "border-stone-300 bg-white hover:border-gold-300"
         }`}>
-          <input type="file" accept="video/*" className="sr-only" onChange={onFile} disabled={uploading || role !== "admin"} />
+          <input type="file" accept="image/*,video/*" className="sr-only" onChange={onFile} disabled={uploading || role !== "admin"} />
           <div className="flex flex-col items-center gap-3">
             {uploading ? (
               <Loader2 className="h-8 w-8 animate-spin text-gold-500" />
@@ -194,27 +193,114 @@ function AdminEditorPage() {
               <p className="font-semibold text-neutral-900">
                 {uploading ? "Enviando para o R2…" : "Clique para escolher um arquivo"}
               </p>
-              <p className="text-[11px] text-stone-500">Somente vídeos (MP4, MOV, WebM) até ~25MB</p>
+              <p className="text-[11px] text-stone-500">Fotos JPG/PNG/WebP ou vídeos MP4 até ~100MB</p>
             </div>
           </div>
         </label>
 
-        {/* Sessão + biblioteca unificadas: SOMENTE VÍDEOS */}
-        <VideoGallery
-          uploaded={uploaded}
-          library={mediaLibrary || []}
-          currentCampaignUrl={campaignForm.url}
-          onSelect={(url) => {
-            setCampaignForm((prev) => ({ ...prev, url }));
-            addToast("Vídeo selecionado para a Campanha Editorial!", "info", "Mídia Selecionada");
-          }}
-          onDeleted={(key) => {
-            setUploaded((prev) => prev.filter((u) => u.key !== key));
-            refetchMedia();
-          }}
-        />
+        {uploaded.length > 0 && (
+          <div className="space-y-4">
+            <h2 className="font-display uppercase tracking-widest text-xs font-bold text-neutral-900">
+              Enviados nesta sessão
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {uploaded.map((it) => (
+                <div
+                  key={it.key}
+                  className="relative group bg-white rounded-2xl border border-stone-200 overflow-hidden hover:border-gold-300 transition"
+                >
+                  <a
+                    href={it.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block"
+                  >
+                    <div className="aspect-square bg-stone-50 flex items-center justify-center">
+                      {/\.(mp4|mov|webm)$/i.test(it.key) ? (
+                        <video src={it.url} className="w-full h-full object-cover" muted />
+                      ) : (
+                        <img src={it.url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                      )}
+                    </div>
+                    <div className="p-2 text-[10px] text-stone-500 truncate flex items-center gap-1">
+                      <ImageIcon className="h-3 w-3 flex-shrink-0" /> {it.key.split("/").pop()}
+                    </div>
+                  </a>
 
+                  <div className="absolute inset-x-0 bottom-0 bg-neutral-900/90 p-2 transform translate-y-full group-hover:translate-y-0 transition-transform flex justify-center">
+                    <button
+                      onClick={() => {
+                        setCampaignForm((prev) => ({ ...prev, url: it.url }));
+                        addToast("Mídia selecionada para a Campanha Editorial!", "info", "Mídia Selecionada");
+                      }}
+                      className="w-full text-white bg-gold-600 hover:bg-gold-500 text-[9px] uppercase tracking-widest font-bold py-1 px-2 rounded-lg flex items-center justify-center gap-1"
+                    >
+                      <Film className="h-2.5 w-2.5" /> Usar na Campanha
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
+        {mediaLibrary && mediaLibrary.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="font-display uppercase tracking-widest text-xs font-bold text-neutral-900">
+                Biblioteca de mídias ({mediaLibrary.length})
+              </h2>
+              <button
+                type="button"
+                onClick={() => refetchMedia()}
+                className="text-[10px] uppercase tracking-widest text-stone-500 hover:text-gold-500 font-bold"
+              >
+                Atualizar
+              </button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {mediaLibrary.map((it: any) => {
+                const isVideo = /\.(mp4|mov|webm)$/i.test(it.key);
+                return (
+                  <div
+                    key={it.key}
+                    className="relative group bg-white rounded-2xl border border-stone-200 overflow-hidden hover:border-gold-300 transition"
+                  >
+                    <a href={it.url} target="_blank" rel="noreferrer" className="block">
+                      <div className="aspect-square bg-stone-50 flex items-center justify-center">
+                        {isVideo ? (
+                          <video src={it.url} className="w-full h-full object-cover" muted />
+                        ) : (
+                          <img src={it.url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                        )}
+                      </div>
+                      <div className="p-2 text-[10px] text-stone-500 truncate flex items-center gap-1">
+                        <ImageIcon className="h-3 w-3 flex-shrink-0" /> {it.key.split("/").pop()}
+                      </div>
+                    </a>
+                    <div className="absolute inset-x-0 bottom-0 bg-neutral-900/90 p-2 transform translate-y-full group-hover:translate-y-0 transition-transform flex justify-center">
+                      <button
+                        onClick={() => {
+                          setCampaignForm((prev) => ({ ...prev, url: it.url }));
+                          addToast(
+                            isVideo
+                              ? "Vídeo selecionado para a Campanha Editorial!"
+                              : "Imagem selecionada para a Campanha Editorial!",
+                            "info",
+                            "Mídia Selecionada"
+                          );
+                        }}
+                        className="w-full text-white bg-gold-600 hover:bg-gold-500 text-[9px] uppercase tracking-widest font-bold py-1 px-2 rounded-lg flex items-center justify-center gap-1"
+                      >
+                        <Film className="h-2.5 w-2.5" /> Usar na Campanha
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
 
 
@@ -340,180 +426,6 @@ function AdminEditorPage() {
           </form>
         </div>
       </div>
-    </div>
-  );
-}
-
-const VIDEO_RE = /\.(mp4|mov|webm|m4v|ogv)(\?|#|$)/i;
-
-function formatBytes(n: number) {
-  if (!n) return "—";
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / 1024 / 1024).toFixed(2)} MB`;
-}
-
-function formatDate(iso: string) {
-  if (!iso) return "";
-  try { return new Date(iso).toLocaleDateString("pt-BR"); } catch { return iso; }
-}
-
-function VideoDurationBadge({ src }: { src: string }) {
-  const [dur, setDur] = useState<string>("");
-  return (
-    <>
-      <video
-        src={src}
-        muted
-        preload="metadata"
-        playsInline
-        className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-        onLoadedMetadata={(e) => {
-          const d = (e.currentTarget as HTMLVideoElement).duration;
-          if (isFinite(d)) {
-            const m = Math.floor(d / 60);
-            const s = Math.floor(d % 60).toString().padStart(2, "0");
-            setDur(`${m}:${s}`);
-          }
-        }}
-      />
-      {dur && (
-        <span className="absolute bottom-1 right-1 bg-black/70 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
-          {dur}
-        </span>
-      )}
-    </>
-  );
-}
-
-type GalleryItem = { key: string; url: string; lastModified?: string; size?: number };
-
-function VideoGallery({
-  uploaded,
-  library,
-  currentCampaignUrl,
-  onSelect,
-  onDeleted,
-}: {
-  uploaded: { key: string; url: string }[];
-  library: GalleryItem[];
-  currentCampaignUrl: string;
-  onSelect: (url: string) => void;
-  onDeleted: (key: string) => void;
-}) {
-  const { addToast } = useToast();
-  const deleteFn = useServerFn(deleteUploadedMedia);
-  const [busyKey, setBusyKey] = useState<string | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-
-  // Une sessão + biblioteca, sem duplicatas, mantendo só vídeos
-  const map = new Map<string, GalleryItem>();
-  for (const u of uploaded) map.set(u.key, { key: u.key, url: u.url });
-  for (const l of library) if (!map.has(l.key)) map.set(l.key, l);
-  const items = [...map.values()].filter((it) => VIDEO_RE.test(it.key));
-
-  async function handleDelete(item: GalleryItem) {
-    if (!confirm(`Excluir "${item.key.split("/").pop()}" definitivamente do Cloudflare R2?`)) return;
-    setBusyKey(item.key);
-    try {
-      let res = await deleteFn({ data: { key: item.key } });
-      if (!res.deleted && res.inUse) {
-        if (!confirm("Este vídeo está em uso na Campanha Editorial. Deseja excluir mesmo assim? A campanha ficará sem vídeo.")) {
-          setBusyKey(null);
-          return;
-        }
-        res = await deleteFn({ data: { key: item.key, force: true } });
-      }
-      if (res.deleted) {
-        addToast("Vídeo removido do R2.", "info", "Excluído");
-        onDeleted(item.key);
-      }
-    } catch (err: any) {
-      addToast(err?.message || "Falha ao excluir.", "info", "Erro");
-    } finally {
-      setBusyKey(null);
-    }
-  }
-
-  if (items.length === 0) {
-    return (
-      <div className="rounded-2xl border-2 border-dashed border-stone-200 p-8 text-center text-stone-400 text-[11px] uppercase tracking-widest font-bold">
-        Nenhum vídeo enviado ainda
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      <h2 className="font-display uppercase tracking-widest text-xs font-bold text-neutral-900">
-        Biblioteca de vídeos ({items.length})
-      </h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {items.map((it) => {
-          const inUse = currentCampaignUrl === it.url;
-          const name = it.key.split("/").pop() || it.key;
-          return (
-            <div
-              key={it.key}
-              className={`bg-white rounded-2xl border overflow-hidden transition ${
-                inUse ? "border-gold-500 ring-2 ring-gold-200" : "border-stone-200 hover:border-gold-300"
-              }`}
-            >
-              <div className="aspect-video bg-black relative">
-                <VideoDurationBadge src={it.url} />
-                {inUse && (
-                  <span className="absolute top-1 left-1 bg-gold-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider flex items-center gap-1">
-                    <Check className="h-2.5 w-2.5" /> Em uso
-                  </span>
-                )}
-              </div>
-              <div className="p-3 space-y-2">
-                <div className="text-[11px] font-semibold text-neutral-900 truncate" title={name}>{name}</div>
-                <div className="text-[10px] text-stone-500 flex justify-between">
-                  <span>{formatDate(it.lastModified || "")}</span>
-                  <span>{formatBytes(it.size || 0)}</span>
-                </div>
-                <div className="grid grid-cols-3 gap-1.5 pt-1">
-                  <button
-                    onClick={() => onSelect(it.url)}
-                    className="text-[9px] uppercase tracking-widest font-bold py-1.5 rounded-lg bg-gold-600 hover:bg-gold-500 text-white flex items-center justify-center gap-1"
-                  >
-                    <Film className="h-2.5 w-2.5" /> Usar
-                  </button>
-                  <button
-                    onClick={() => setPreviewUrl(it.url)}
-                    className="text-[9px] uppercase tracking-widest font-bold py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-neutral-900 flex items-center justify-center gap-1"
-                  >
-                    <Eye className="h-2.5 w-2.5" /> Ver
-                  </button>
-                  <button
-                    onClick={() => handleDelete(it)}
-                    disabled={busyKey === it.key}
-                    className="text-[9px] uppercase tracking-widest font-bold py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 flex items-center justify-center gap-1 disabled:opacity-50"
-                  >
-                    {busyKey === it.key ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Trash2 className="h-2.5 w-2.5" />} Excluir
-                  </button>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {previewUrl && (
-        <div
-          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-6"
-          onClick={() => setPreviewUrl(null)}
-        >
-          <video
-            src={previewUrl}
-            controls
-            autoPlay
-            className="max-w-4xl max-h-[80vh] rounded-xl"
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
-      )}
     </div>
   );
 }
