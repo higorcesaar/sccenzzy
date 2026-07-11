@@ -59,7 +59,7 @@ export default function CampaignBanner() {
               autoPlay
               loop
               muted
-              defaultMuted
+              
               playsInline
               disablePictureInPicture
               disableRemotePlayback
