@@ -2,12 +2,13 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
-import { uploadProductMedia, listUploadedMedia } from "@/lib/r2.functions";
+import { uploadProductMedia, listUploadedMedia, deleteUploadedMedia } from "@/lib/r2.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { getCampaignVideo, updateCampaignVideo } from "@/lib/campaign.functions";
-import { Loader2, Upload, ShieldCheck, ImageIcon, Film, Save } from "lucide-react";
+import { Loader2, Upload, ShieldCheck, Film, Save, Trash2, Eye, Check } from "lucide-react";
 import { resolveVideoEmbed } from "@/lib/video-embed";
+
 
 export const Route = createFileRoute("/admin/editor")({
   head: () => ({ meta: [{ title: "Admin · Editor de mídia | Scenzzy" }] }),
