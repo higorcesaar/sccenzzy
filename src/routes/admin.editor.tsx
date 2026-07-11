@@ -194,7 +194,7 @@ function AdminEditorPage() {
               <p className="font-semibold text-neutral-900">
                 {uploading ? "Enviando para o R2…" : "Clique para escolher um arquivo"}
               </p>
-              <p className="text-[11px] text-stone-500">Fotos JPG/PNG/WebP ou vídeos MP4 até ~100MB</p>
+              <p className="text-[11px] text-stone-500">Somente vídeos (MP4, MOV, WebM) até ~25MB</p>
             </div>
           </div>
         </label>
