@@ -183,7 +183,7 @@ function AdminEditorPage() {
         <label className={`block rounded-3xl border-2 border-dashed p-10 text-center transition-all cursor-pointer ${
           uploading ? "border-gold-300 bg-gold-50/50" : "border-stone-300 bg-white hover:border-gold-300"
         }`}>
-          <input type="file" accept="image/*,video/*" className="sr-only" onChange={onFile} disabled={uploading || role !== "admin"} />
+          <input type="file" accept="video/*" className="sr-only" onChange={onFile} disabled={uploading || role !== "admin"} />
           <div className="flex flex-col items-center gap-3">
             {uploading ? (
               <Loader2 className="h-8 w-8 animate-spin text-gold-500" />
