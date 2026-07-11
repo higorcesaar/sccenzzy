@@ -199,109 +199,22 @@ function AdminEditorPage() {
           </div>
         </label>
 
-        {uploaded.length > 0 && (
-          <div className="space-y-4">
-            <h2 className="font-display uppercase tracking-widest text-xs font-bold text-neutral-900">
-              Enviados nesta sessão
-            </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {uploaded.map((it) => (
-                <div
-                  key={it.key}
-                  className="relative group bg-white rounded-2xl border border-stone-200 overflow-hidden hover:border-gold-300 transition"
-                >
-                  <a
-                    href={it.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block"
-                  >
-                    <div className="aspect-square bg-stone-50 flex items-center justify-center">
-                      {/\.(mp4|mov|webm)$/i.test(it.key) ? (
-                        <video src={it.url} className="w-full h-full object-cover" muted />
-                      ) : (
-                        <img src={it.url} alt="" className="w-full h-full object-cover" loading="lazy" />
-                      )}
-                    </div>
-                    <div className="p-2 text-[10px] text-stone-500 truncate flex items-center gap-1">
-                      <ImageIcon className="h-3 w-3 flex-shrink-0" /> {it.key.split("/").pop()}
-                    </div>
-                  </a>
+        {/* Sessão + biblioteca unificadas: SOMENTE VÍDEOS */}
+        <VideoGallery
+          uploaded={uploaded}
+          library={mediaLibrary || []}
+          currentCampaignUrl={campaignForm.url}
+          onSelect={(url) => {
+            setCampaignForm((prev) => ({ ...prev, url }));
+            addToast("Vídeo selecionado para a Campanha Editorial!", "info", "Mídia Selecionada");
+          }}
+          onDeleted={(key) => {
+            setUploaded((prev) => prev.filter((u) => u.key !== key));
+            refetchMedia();
+          }}
+        />
 
-                  <div className="absolute inset-x-0 bottom-0 bg-neutral-900/90 p-2 transform translate-y-full group-hover:translate-y-0 transition-transform flex justify-center">
-                    <button
-                      onClick={() => {
-                        setCampaignForm((prev) => ({ ...prev, url: it.url }));
-                        addToast("Mídia selecionada para a Campanha Editorial!", "info", "Mídia Selecionada");
-                      }}
-                      className="w-full text-white bg-gold-600 hover:bg-gold-500 text-[9px] uppercase tracking-widest font-bold py-1 px-2 rounded-lg flex items-center justify-center gap-1"
-                    >
-                      <Film className="h-2.5 w-2.5" /> Usar na Campanha
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
-        {mediaLibrary && mediaLibrary.length > 0 && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="font-display uppercase tracking-widest text-xs font-bold text-neutral-900">
-                Biblioteca de mídias ({mediaLibrary.length})
-              </h2>
-              <button
-                type="button"
-                onClick={() => refetchMedia()}
-                className="text-[10px] uppercase tracking-widest text-stone-500 hover:text-gold-500 font-bold"
-              >
-                Atualizar
-              </button>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {mediaLibrary.map((it: any) => {
-                const isVideo = /\.(mp4|mov|webm)$/i.test(it.key);
-                return (
-                  <div
-                    key={it.key}
-                    className="relative group bg-white rounded-2xl border border-stone-200 overflow-hidden hover:border-gold-300 transition"
-                  >
-                    <a href={it.url} target="_blank" rel="noreferrer" className="block">
-                      <div className="aspect-square bg-stone-50 flex items-center justify-center">
-                        {isVideo ? (
-                          <video src={it.url} className="w-full h-full object-cover" muted />
-                        ) : (
-                          <img src={it.url} alt="" className="w-full h-full object-cover" loading="lazy" />
-                        )}
-                      </div>
-                      <div className="p-2 text-[10px] text-stone-500 truncate flex items-center gap-1">
-                        <ImageIcon className="h-3 w-3 flex-shrink-0" /> {it.key.split("/").pop()}
-                      </div>
-                    </a>
-                    <div className="absolute inset-x-0 bottom-0 bg-neutral-900/90 p-2 transform translate-y-full group-hover:translate-y-0 transition-transform flex justify-center">
-                      <button
-                        onClick={() => {
-                          setCampaignForm((prev) => ({ ...prev, url: it.url }));
-                          addToast(
-                            isVideo
-                              ? "Vídeo selecionado para a Campanha Editorial!"
-                              : "Imagem selecionada para a Campanha Editorial!",
-                            "info",
-                            "Mídia Selecionada"
-                          );
-                        }}
-                        className="w-full text-white bg-gold-600 hover:bg-gold-500 text-[9px] uppercase tracking-widest font-bold py-1 px-2 rounded-lg flex items-center justify-center gap-1"
-                      >
-                        <Film className="h-2.5 w-2.5" /> Usar na Campanha
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
 
 
 
