@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+
 /**
  * Returns a presigned PUT URL for uploading directly to Cloudflare R2.
  * Caller must be authenticated; admin-only enforcement happens via role check.
@@ -171,3 +172,67 @@ export const listUploadedMedia = createServerFn({ method: "GET" })
 
 
 
+
+/**
+ * Exclui um objeto do bucket R2. Se o vídeo estiver em uso na Campanha
+ * Editorial, exige `force: true` para prosseguir. Também limpa a URL da
+ * campanha quando o arquivo excluído é o mesmo em uso.
+ */
+export const deleteUploadedMedia = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { key: string; force?: boolean }) => {
+    if (!input?.key || typeof input.key !== "string" || input.key.includes("..")) {
+      throw new Error("key inválida");
+    }
+    return { key: input.key, force: !!input.force };
+  })
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: isAdmin } = await supabase.rpc("has_role", {
+      _user_id: userId,
+      _role: "admin",
+    });
+    if (!isAdmin) throw new Error("Forbidden");
+
+    // Verifica se está em uso na Campanha Editorial
+    const proxyUrl = `/api/public/r2/${data.key}`;
+    const { data: setting } = await supabase
+      .from("scz_settings")
+      .select("value")
+      .eq("key", "campaign_video")
+      .maybeSingle();
+    const currentUrl = (setting?.value as any)?.url as string | undefined;
+    const inUse = !!currentUrl && currentUrl === proxyUrl;
+    if (inUse && !data.force) {
+      return { deleted: false, inUse: true };
+    }
+
+    const accountId = process.env.R2_ACCOUNT_ID!;
+    const accessKeyId = process.env.R2_ACCESS_KEY_ID!;
+    const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY!;
+    const bucket = process.env.R2_BUCKET_NAME!;
+
+    const { AwsClient } = await import("aws4fetch");
+    const aws = new AwsClient({ accessKeyId, secretAccessKey, service: "s3", region: "auto" });
+    const endpoint = `https://${accountId}.r2.cloudflarestorage.com/${bucket}/${data.key}`;
+    const res = await aws.fetch(endpoint, { method: "DELETE" });
+    if (!res.ok && res.status !== 204) {
+      const txt = await res.text().catch(() => "");
+      throw new Error(`Falha ao excluir do R2 (${res.status}): ${txt.slice(0, 200)}`);
+    }
+
+    if (inUse) {
+      await supabase
+        .from("scz_settings")
+        .upsert(
+          {
+            key: "campaign_video",
+            value: { ...(setting?.value as any), url: "" },
+            updated_by: userId,
+          },
+          { onConflict: "key" }
+        );
+    }
+
+    return { deleted: true, inUse };
+  });
