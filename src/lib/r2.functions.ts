@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+
 /**
  * Returns a presigned PUT URL for uploading directly to Cloudflare R2.
  * Caller must be authenticated; admin-only enforcement happens via role check.
